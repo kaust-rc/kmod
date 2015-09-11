@@ -1,0 +1,68 @@
+
+
+
+
+
+
+app_dir: $app/INTEL/$version.app/
+
+#app_dir: /opt/share/$dir_name/v${version}.app/$name/release
+
+
+#ReportIntelVersion
+
+
+mkl_root: $app_dir/mkl
+MKLROOT: $mkl_root
+
+ipp_root: $app_dir/ipp/em64t
+
+env:
+    ICC_ROOT: $app_dir
+
+
+prepend:
+    IPPROOT: $ipp_root
+    MANPATH: $app_dir/man/en_US
+
+    INTEL_LICENSE_FILE: $app_dir/licenses
+
+    LIBRARY_PATH: 
+     - $ipp_root/lib
+     - $mkl_root/lib/em64t
+     - $app_dir/lib/intel64
+
+     - $ipp_root/lib
+     - $mkl_root/lib/em64t
+     - $app_dir/lib/intel64
+
+    FPATH: $mkl_root/include
+
+    LIB:
+     - $ipp_root/lib
+     - $ipp_root/lib
+
+    CPATH: 
+     - $mkl_root/include
+     - $ipp_root/include
+
+    # appending path for use with Ubuntu -- headers in non-default location
+     - /usr/include/x86_64-linux-gnu
+
+    NLSPATH:
+     - $ipp_root/lib/locale/%l_%t/%N
+     - $mkl_root/lib/em64t/locale/%l_%t/%N
+     - $app_dir/idb/intel64/locale/%l_%t/%N
+     - $app_dir/lib/intel64/locale/%l_%t/%N
+
+    PATH: $app_dir/bin/intel64
+
+    INCLUDE:
+     - $mkl_root/include
+     - $ipp_root/include
+
+
+#ReportIntelVersion
+
+
+

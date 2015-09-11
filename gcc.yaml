@@ -1,0 +1,81 @@
+
+
+
+
+# Additional conflicts
+#conflict: name
+
+# Prereqs
+#prereq: name
+
+
+root: /opt/share/version
+
+version: 1.2.3
+
+# Specific setup goes here, license files, path setup, etc
+
+# FIXME hardcoding these versions for now
+arch: x86_64-unknown-linux-gnu
+
+app_dir: root/gcc/version/
+apps_root: /opt/share
+mpc_version: 0.9
+mpfr_version: 3.0.1
+gmp_version: 5.0.2
+binutils_ver: 2.21
+distro: x86_64
+module_name: gcc
+
+
+# Add gcc and binutils to PATH
+prepend:
+    PATH:
+     - app_dir/bin
+     - root/binutils/binutils_ver/distro/bin
+
+    ENV: abc
+
+# Set the gcc search path (dirs specified via command line -L/dir are searched first)
+    LIBRARY_PATH:
+     - app_dir/lib/module_name/arch/lib
+     - app_dir/lib/module_name/arch/lib64
+
+     # Add locations of gcc shared libs to load library path
+     - app_dir/lib/module_name/arch/version/32
+     - app_dir/lib/module_name/arch/version
+     - app_dir/lib
+     - app_dir/lib64
+
+
+     # Add locations of external (mpc, mpfr, gmp) shared libs to load library path
+     - apps_root/gmp/gmp_version/distro/lib
+     - apps_root/mpfr/mpfr_version/distro/lib
+     - apps_root/mpc/mpc_version/distro/lib
+
+# Set MANPATH and INFOPATH
+    MANPATH: app_dir/share/man
+    INFOPATH:
+     - app_dir/share/info
+     - apps_root/binutils/binutils_ver/distro/share/info
+
+
+#set myver [exec gcc --version | head -n1 | awk "{ print \3 }" ]
+#puts stderr "Current module_name version: myver"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

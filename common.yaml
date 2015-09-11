@@ -1,0 +1,17 @@
+
+
+
+#common
+
+
+
+root: /opt/share/
+
+install_dir: /opt/share/*app/*version
+
+
+
+
+
+
+
