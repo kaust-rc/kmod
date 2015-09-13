@@ -34,8 +34,6 @@ prepend:
      - app_dir/bin
      - root/binutils/binutils_ver/distro/bin
 
-    ENV: abc
-
 # Set the gcc search path (dirs specified via command line -L/dir are searched first)
     LIBRARY_PATH:
      - app_dir/lib/module_name/arch/lib
