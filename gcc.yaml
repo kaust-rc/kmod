@@ -1,65 +1,83 @@
 
 
+preload-yaml: [common.yaml, compiler-common.yaml]
 
 
-# Additional conflicts
-#conflict: name
+name: gcc
 
-# Prereqs
-#prereq: name
+version: 4.8.1
+# - 5.1.0
+
+verbosity: vvv
+
+group:
+ - compilers
+ - opensource
+ - gnu
 
 
-root: /opt/share/version
-
-version: 1.2.3
+root: /opt/share/$module/$version
 
 # Specific setup goes here, license files, path setup, etc
-
-# FIXME hardcoding these versions for now
+# FIXME hardcoding these $versions for now
 arch: x86_64-unknown-linux-gnu
 
-app_dir: root/gcc/version/
+
+
+
+app_dir: $apps_root/gcc/$version/
 apps_root: /opt/share
-mpc_version: 0.9
-mpfr_version: 3.0.1
-gmp_version: 5.0.2
+mpc_$version: 0.9
+mpfr_$version: 3.0.1
+gmp_$version: 5.0.2
 binutils_ver: 2.21
 distro: x86_64
-module_name: gcc
 
+module_name: $name
+module: $module_name
+
+
+mkl_root: $app_dir/mkl
+ipp_root: $app_dir/ipp/em64t
+
+
+
+setenv:
+    MKLROOT: mkl_root
+    ICC_ROOT: $app_dir
 
 # Add gcc and binutils to PATH
 prepend:
     PATH:
-     - app_dir/bin
-     - root/binutils/binutils_ver/distro/bin
+     - $app_dir/bin
+     - $apps_root/binutils/$binutils_ver/$distro/bin
 
 # Set the gcc search path (dirs specified via command line -L/dir are searched first)
     LIBRARY_PATH:
-     - app_dir/lib/module_name/arch/lib
-     - app_dir/lib/module_name/arch/lib64
+     - $app_dir/lib/$module_name/$arch/lib
+     - $app_dir/lib/$module_name/$arch/lib64
 
      # Add locations of gcc shared libs to load library path
-     - app_dir/lib/module_name/arch/version/32
-     - app_dir/lib/module_name/arch/version
-     - app_dir/lib
-     - app_dir/lib64
+     - $app_dir/lib/$module_name/$arch/$version/32
+     - $app_dir/lib/$module_name/$arch/$version
+     - $app_dir/lib
+     - $app_dir/lib64
 
 
      # Add locations of external (mpc, mpfr, gmp) shared libs to load library path
-     - apps_root/gmp/gmp_version/distro/lib
-     - apps_root/mpfr/mpfr_version/distro/lib
-     - apps_root/mpc/mpc_version/distro/lib
+     - $apps_root/gmp/$gmp_version/$distro/lib
+     - $apps_root/mpfr/$mpfr_version/$distro/lib
+     - $apps_root/mpc/$mpc_version/$distro/lib
 
 # Set MANPATH and INFOPATH
-    MANPATH: app_dir/share/man
+    MANPATH: $app_dir/share/man
     INFOPATH:
-     - app_dir/share/info
-     - apps_root/binutils/binutils_ver/distro/share/info
+     - $app_dir/share/info
+     - $apps_root/binutils/$binutils_ver/$distro/share/info
 
 
-#set myver [exec gcc --version | head -n1 | awk "{ print \3 }" ]
-#puts stderr "Current module_name version: myver"
+#set myver [exec gcc --$version | head -n1 | awk "{ print \3 }" ]
+#puts stderr "Current $module_name $version: myver"
 
 
 

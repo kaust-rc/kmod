@@ -3,8 +3,8 @@ KAUST ENVIRONMENT MODULES
 
 Better for user
  * Allows grouping, and bundles of module loading
- * More aesthetic listing of modules and version
- * More informative tab completion
+ * More aestheticly pleasing listing of modules and version
+ * (maybe) More informative tab completion
  * Can display a "Message of the day" to users given the module they load, which is very useful when planning upgrades or making changes to that module in particular
 
 Better for staff

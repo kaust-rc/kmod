@@ -26,8 +26,13 @@ vers = args[2] if len(args) >= 3 else None
 #cmd = args[0] if len(args) >= 1 else None
 #mod_vers = args[1:]
 
+def load_yaml(mod):
+    return yaml.load(file(mod + '.yaml'))
 
-config = yaml.load(file(mod + '.yaml'))
+
+config = load_yaml(mod)
+
+
 
 if DEBUG:
     print cmd, mod, vers
@@ -37,28 +42,30 @@ if DEBUG:
 
 
 cmds = ['load', 'unload', 'show', 'avail', 'purge', 'list']
-keywords = ['prepend', 'append', 'env']
+
+keywords = ['prepend', 'append', 'setenv', 'prereq', 'postreq', 'conflict', 'alias']
+meta = ['groups', 'bundles', 'name', 'versions', 'preload-yaml', 'verbosity']
 
 
 
-def load_yaml(mod):
+def interpolate_vars(val, keys):
+    found = re.findall(replace, val)
+    for i in found:
+        if i in keys:
+            val = val.replace('$'+str(i), str(d[i]))
+        else:
+            print i + "not found"
+            raise Exception
+    return val
+
+
+
+def interpolate(mod):
     replace = re.compile(r'\$([a-z|_|-]*?)[\/| |\$\.\,]')
 
     d = config
     if 'prepend' in d:
         prepend = d['prepend']
-
-
-
-    def macro2(val, keys):
-        found = re.findall(replace, val)
-        for i in found:
-            if i in keys:
-                val = val.replace('$'+str(i), str(d[i]))
-            else:
-                print i + "not found"
-                raise Exception
-        return val
 
     keys2 = keys[:0]
     for k in keys:
@@ -70,6 +77,9 @@ def load_yaml(mod):
             for val in prepend[key]:
 
                 print 'prepend', key, macro2(val, keys2)
+
+
+
 
 
 def prepend(env, val):

@@ -16,7 +16,6 @@ MAP = {'append-path': 'append',
        'conflict': 'conflict',
        }
 
-config = dict()
 
 ignore = [
     "source [file dirname $::ModulesCurrentModulefile]/../../common/common_setup2.tcl",
@@ -26,7 +25,7 @@ ignore = [
     "}",
     ]
 
-def add2list(param):
+def add2list(param, config):
     name, val = param[:2]
     name = MAP[name]
 
@@ -40,7 +39,7 @@ def add2list(param):
 
 
 
-def add3list(param):
+def add3list(param, config):
     name, key, val = param[:3]
     name = MAP[name]
 
@@ -53,7 +52,7 @@ def add3list(param):
         config[name][key] = [val] 
 
 
-def additem(param):
+def additem(param, config):
     name, key, val = param[:3]
     name = MAP[name]
 
@@ -62,7 +61,8 @@ def additem(param):
 
     config[name][key] = val
 
-def parsit(filename):
+def parsit(mod, filename):
+    config = dict()
     with open(filename) as f:
         cannot_parse = list()
 
@@ -88,13 +88,13 @@ def parsit(filename):
 
 
             if param[0] in ['prepend-path', 'append-path']:
-                add3list(param)
+                add3list(param, config)
 
             elif param[0] in ['prereq', 'set-alias', 'conflict']:
-                add2list(param)
+                add2list(param, config)
 
             elif param[0] in ['setenv']:
-                additem(param)
+                additem(param, config)
 
             elif param[0] == 'set':
                 config[param[1]] = param[2]
@@ -107,13 +107,13 @@ def parsit(filename):
                     print param
                 tmp = ['prereq']
                 tmp.extend(param[2:])
-                add2list(tmp)
+                add2list(tmp, config)
 
             else:
                 cannot_parse.append('Cannot Parse "%s"' % line)
 
 
-    with open(mod + '.yaml', 'w') as outfile:
+    with open('yaml/' + mod + '.yaml', 'w') as outfile:
         outfile.write( yaml.dump(config, default_flow_style=False))
             
     if cannot_parse:
@@ -128,7 +128,7 @@ dirs = os.listdir(root)
 
 for d in dirs:
     filename = root + d + '/.base'
-    parsit(filename)
+    parsit(d, filename)
 
     #pp = pprint.PrettyPrinter(indent=4)
     #pp.pprint(config)
