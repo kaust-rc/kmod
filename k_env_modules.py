@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
-import sys, os
+import os
 import re
+import sys
 import yaml
 
 import pprint
@@ -22,61 +23,154 @@ cmd = args[0] if len(args) >= 1 else None
 mod = args[1] if len(args) >= 2 else None
 vers = args[2] if len(args) >= 3 else None
 
-#TODO should be, to allow multiple apps varsions etc...
-#cmd = args[0] if len(args) >= 1 else None
-#mod_vers = args[1:]
-
-def load_yaml(mod):
-    return yaml.load(file(mod + '.yaml'))
-
-
-config = load_yaml(mod)
 
 
 
-if DEBUG:
-    print cmd, mod, vers
 
-    pp = pprint.PrettyPrinter(indent=4)
-    pp.pprint(config)
+keywords = ['prepend', 'append', 'env']
+
 
 
 cmds = ['load', 'unload', 'show', 'avail', 'purge', 'list']
 
+
+
 keywords = ['prepend', 'append', 'setenv', 'prereq', 'postreq', 'conflict', 'alias']
 meta = ['groups', 'bundles', 'name', 'versions', 'preload-yaml', 'verbosity']
+forbidden = ['group', 'bundle', ]  #version, name???
 
 
 
-def interpolate_vars(val, keys):
-    found = re.findall(replace, val)
-    for i in found:
-        if i in keys:
-            val = val.replace('$'+str(i), str(d[i]))
-        else:
-            print i + "not found"
+class Module(object):
+
+
+    def __init__(self, mod='common'):
+        self.pp = pprint.PrettyPrinter(indent=4)
+       
+        self.filename = mod + '.yaml'
+    
+        self.load_yaml()
+
+
+        self.validate_config()
+
+        #sets self.macros = macro variables, ie not keywords or meta info
+        self.get_macros()
+
+        if DEBUG:
+            print cmd, mod, vers
+            self.pp_config()
+
+
+
+    def load_yaml(self):
+        self.config = yaml.load(file(self.filename))
+
+
+    def pp_config(self):
+        self.pp.pprint(self.config)
+
+
+    def validate_config(self):
+        for i in self.config.keys():
+            if '$' in i:
+                print i*5
+                raise Exception
+        for i in forbidden:
+            if i in self.config:
+                print i*5
+                raise Exception
+
+
+    def export(self):
+        pass
+
+
+    def get_path(self):
+        """
+        Test function just to get a prepend-path
+        """
+        path = self.config['prepend']['PATH']
+        
+        print self.interpolate(path)
+
+
+    def get_macros(self):
+        tmp = [i for i in self.config]# if i not in meta]
+        tmp = [i for i in tmp if i not in keywords]
+
+        self.macros = dict()
+        for i in tmp:
+            self.macros[i] = str(self.config[i])
+
+        for i in tmp:
+            self.macros[i] = self.interpolate_macros(self.macros[i])
+        
+
+
+    def interpolate_macros(self, val):
+        """
+        Interpolates the macros themselves,
+            if they contain macros in each other
+        """
+        #If there are more than 20 deep macros then change the yamp
+        for i in range(20):
+
+            val = self.interpolate(val)
+            if '$' not in val:
+                return val
+
+        raise Exception("Too much depth in recursion")        
+
+
+    def interpolate(self, val):
+        """
+        Scans the val for macro variables, and substitutes
+        """
+        found = [ i[1:] for i in val.split('/') if i.startswith('$')]
+
+        if not found:
+            print 'not found ', val
+            return val
+
+        notfound = list()
+        for i in found:
+            if i in self.macros:
+                val = val.replace('$' + i, self.macros[i])
+            else:
+                notfound.append(i)
+
+        if notfound:
+            print 'ERROR ' + str(notfound) + 'not in macros'
             raise Exception
-    return val
+
+        return val
 
 
 
-def interpolate(mod):
-    replace = re.compile(r'\$([a-z|_|-]*?)[\/| |\$\.\,]')
+    def get_val(self, val):
+        val = self.interpolate(val)
+        if '$' in val:
+            print 'error $ still in val'
+            raise Exception
+        return val
 
-    d = config
-    if 'prepend' in d:
-        prepend = d['prepend']
+    def resolved(self):
+        for i in self.macros:
+            print i, self.macros[i]
 
-    keys2 = keys[:0]
-    for k in keys:
-        keys2.append(macro2(d[k], keys2))
-    print keys2
+        for i in self.config:
+            if i in self.macros:
+                continue
 
-    for key in prepend:
-        if isinstance(prepend[key], list):
-            for val in prepend[key]:
+            if isinstance(self.config[i], dict):            
+                for keyword in self.config[i]:
+                    if isinstance(self.config[i][keyword], list):            
+                        for j in self.config[i][keyword]:
+                            print j, self.interpolate(j)
+            #else:
+            #    print 'resolved', i, self.interpolate(self.config[i])
 
-                print 'prepend', key, macro2(val, keys2)
 
 
 
@@ -107,55 +201,61 @@ def remove(env, val):
 
 
 
-if cmd == 'load':
+def main():
+
+    if cmd == 'load':
 
 
-    for var in config.get('prepend', []):
-        if isinstance(config['prepend'][var], list):
-            for val in config['prepend'][var]:
+        for var in config.get('prepend', []):
+            if isinstance(config['prepend'][var], list):
+                for val in config['prepend'][var]:
+                    prepend(var, val)
+
+            elif isinstance(config['prepend'][var], str):
                 prepend(var, val)
 
-        elif isinstance(config['prepend'][var], str):
-            prepend(var, val)
-
-    prepend('LOADEDMODULES', mod)
+        prepend('LOADEDMODULES', mod)
 
 
-    export = ' '.join(['%s="%s"' % (i, os.environ[i]) for i in config['prepend']])
-    export += ' LOADEDMODULES="%s"' % (os.environ['LOADEDMODULES'])
+        export = ' '.join(['%s="%s"' % (i, os.environ[i]) for i in config['prepend']])
+        export += ' LOADEDMODULES="%s"' % (os.environ['LOADEDMODULES'])
 
-    if export:
-        print 'export %s' % (export)
+        if export:
+            print 'export %s' % (export)
 
 
-elif cmd == 'unload':
-    for var in config.get('prepend', []):
-        if isinstance(config['prepend'][var], list):
-            for val in config['prepend'][var]:
+    elif cmd == 'unload':
+        for var in config.get('prepend', []):
+            if isinstance(config['prepend'][var], list):
+                for val in config['prepend'][var]:
+                    remove(var, val)
+
+            elif isinstance(config['prepend'][var], str):
                 remove(var, val)
 
-        elif isinstance(config['prepend'][var], str):
-            remove(var, val)
-
-    remove('LOADEDMODULES', mod)
+        remove('LOADEDMODULES', mod)
 
 
-    export = ' '.join(['%s="%s"' % (i, os.environ[i]) for i in config['prepend'] if os.environ[i] != ''])
-    export += ' LOADEDMODULES="%s"' % (os.environ['LOADEDMODULES'])
+        export = ' '.join(['%s="%s"' % (i, os.environ[i]) for i in config['prepend'] if os.environ[i] != ''])
+        export += ' LOADEDMODULES="%s"' % (os.environ['LOADEDMODULES'])
 
-    #TODO add regex for multiple '\:.*'
-    export = export.replace('::', ':')
-    if export:
-        print 'export %s' % (export)
+        #TODO add regex for multiple '\:.*'
+        export = export.replace('::', ':')
+        if export:
+            print 'export %s' % (export)
 
-    
-    unset = ' '.join(['%s' % (i) for i in config['prepend'] if os.environ[i] == ''])
-    if unset:
-        print "unset %s" % (unset)
+        
+        unset = ' '.join(['%s' % (i) for i in config['prepend'] if os.environ[i] == ''])
+        if unset:
+            print "unset %s" % (unset)
 
 
 
 
 
+if __name__=='__main__':
+    m = Module('gcc')
+    m.pp_config()
 
+    m.resolved()
 

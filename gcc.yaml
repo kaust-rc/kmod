@@ -6,11 +6,14 @@ preload-yaml: [common.yaml, compiler-common.yaml]
 name: gcc
 
 version: 4.8.1
+
+#versions:
+# - 4.8.0
 # - 5.1.0
 
 verbosity: vvv
 
-group:
+groups:
  - compilers
  - opensource
  - gnu
@@ -23,13 +26,15 @@ root: /opt/share/$module/$version
 arch: x86_64-unknown-linux-gnu
 
 
+app_dir: $apps_root/gcc/$version
 
-
-app_dir: $apps_root/gcc/$version/
+#TODO
+#app_dir: $apps_root/gcc/$version
+#
 apps_root: /opt/share
-mpc_$version: 0.9
-mpfr_$version: 3.0.1
-gmp_$version: 5.0.2
+mpc_version: 0.9
+mpfr_version: 3.0.1
+gmp_version: 5.0.2
 binutils_ver: 2.21
 distro: x86_64
 
@@ -48,9 +53,11 @@ setenv:
 
 # Add gcc and binutils to PATH
 prepend:
-    PATH:
-     - $app_dir/bin
-     - $apps_root/binutils/$binutils_ver/$distro/bin
+    PATH: $app_dir/bin
+       #- $app_dir/bin
+       #- $apps_root/binutils/$binutils_ver/$distro/bin
+       #- $apps_root/binutils/$binutils_ver/$distro/bin
+
 
 # Set the gcc search path (dirs specified via command line -L/dir are searched first)
     LIBRARY_PATH:
