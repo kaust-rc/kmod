@@ -4,39 +4,19 @@ import os
 import re
 import sys
 import yaml
-
 import pprint
 
-import yaml
 
-
-if len(sys.argv) >= 2 and sys.argv[1] == 'debug':
-    print 'Argument List: %s' % (sys.argv)
-    DEBUG = True
-    args = sys.argv[2:]
-else:
-    DEBUG = False
-    args = sys.argv[1:]
-
-
-cmd = args[0] if len(args) >= 1 else None
-mod = args[1] if len(args) >= 2 else None
-vers = args[2] if len(args) >= 3 else None
-
-
-
-
-
-keywords = ['prepend', 'append', 'env']
-
-
-
+#module [cmd]  a list of the allowable commands
 cmds = ['load', 'unload', 'show', 'avail', 'purge', 'list']
 
-
-
+#Keywords reserved for module application
 keywords = ['prepend', 'append', 'setenv', 'prereq', 'postreq', 'conflict', 'alias']
+
+#Parameters reserved for module application
 meta = ['groups', 'bundles', 'name', 'versions', 'preload-yaml', 'verbosity']
+
+#Parameters forbidden, potentially make these available
 forbidden = ['group', 'bundle', ]  #version, name???
 
 
@@ -44,11 +24,11 @@ forbidden = ['group', 'bundle', ]  #version, name???
 class Module(object):
 
 
-    def __init__(self, mod='common'):
-        self.pp = pprint.PrettyPrinter(indent=4)
-       
+    def __init__(self, cmd=None, mod='common', vers=None):
+
+
         self.filename = mod + '.yaml'
-    
+
         self.load_yaml()
 
 
@@ -68,6 +48,7 @@ class Module(object):
 
 
     def pp_config(self):
+        self.pp = pprint.PrettyPrinter(indent=4)
         self.pp.pprint(self.config)
 
 
@@ -82,19 +63,6 @@ class Module(object):
                 raise Exception
 
 
-    def export(self):
-        pass
-
-
-    def get_path(self):
-        """
-        Test function just to get a prepend-path
-        """
-        path = self.config['prepend']['PATH']
-        
-        print self.interpolate(path)
-
-
     def get_macros(self):
         tmp = [i for i in self.config]# if i not in meta]
         tmp = [i for i in tmp if i not in keywords]
@@ -105,7 +73,7 @@ class Module(object):
 
         for i in tmp:
             self.macros[i] = self.interpolate_macros(self.macros[i])
-        
+
 
 
     def interpolate_macros(self, val):
@@ -120,7 +88,7 @@ class Module(object):
             if '$' not in val:
                 return val
 
-        raise Exception("Too much depth in recursion")        
+        raise Exception("Too much depth in recursion")
 
 
     def interpolate(self, val):
@@ -155,7 +123,11 @@ class Module(object):
             raise Exception
         return val
 
-    def resolved(self):
+
+    def pp_resolved(self):
+        """
+        Temporary function for debug
+        """
         for i in self.macros:
             print i, self.macros[i]
 
@@ -163,80 +135,82 @@ class Module(object):
             if i in self.macros:
                 continue
 
-            if isinstance(self.config[i], dict):            
+            if isinstance(self.config[i], dict):
                 for keyword in self.config[i]:
-                    if isinstance(self.config[i][keyword], list):            
+                    if isinstance(self.config[i][keyword], list):
                         for j in self.config[i][keyword]:
                             print j, self.interpolate(j)
             #else:
             #    print 'resolved', i, self.interpolate(self.config[i])
 
 
+    def get_path(self):
+        """
+        Test function just to get a prepend-path
+        """
+        path = self.config['prepend']['PATH']
+
+        print self.interpolate(path)
+
+
+    def prepend(self, env, val):
+        if env not in os.environ:
+            os.environ[env] = val
+            return
+
+        envvar = os.environ[env].split(':')
+        envvar.insert(0, val)
+        os.environ[env] = ':'.join(envvar)
+
+
+    def remove(self, env, val):
+        if env not in os.environ:
+            return
+
+        envval = os.environ[env].split(':')
+
+        if val in envval:
+            envval.remove(val)
+            #to remove every instance
+            #envval = [i for i in envval if i != val]
+
+        os.environ[env] = ':'.join(envval)
 
 
 
+    def load(self):
 
-def prepend(env, val):
-    if env not in os.environ:
-        os.environ[env] = val
-        return
+        for var in self.config.get('prepend', []):
+            if isinstance(self.config['prepend'][var], list):
+                for val in self.config['prepend'][var]:
+                    self.prepend(var, val)
 
-    envvar = os.environ[env].split(':')
-    envvar.insert(0, val)
-    os.environ[env] = ':'.join(envvar)
+            elif isinstance(self.config['prepend'][var], str):
+                self.prepend(var, self.config['prepend'][var])
 
-
-def remove(env, val):
-    if env not in os.environ:
-        return
-
-    envval = os.environ[env].split(':')
-
-    if val in envval:
-        envval.remove(val)
-        #to remove every instance
-        #envval = [i for i in envval if i != val]
-
-    os.environ[env] = ':'.join(envval)
+        self.prepend('LOADEDMODULES', mod)
 
 
-
-def main():
-
-    if cmd == 'load':
-
-
-        for var in config.get('prepend', []):
-            if isinstance(config['prepend'][var], list):
-                for val in config['prepend'][var]:
-                    prepend(var, val)
-
-            elif isinstance(config['prepend'][var], str):
-                prepend(var, val)
-
-        prepend('LOADEDMODULES', mod)
-
-
-        export = ' '.join(['%s="%s"' % (i, os.environ[i]) for i in config['prepend']])
+        export = ' '.join(['%s="%s"' % (i, os.environ[i]) for i in self.config['prepend']])
         export += ' LOADEDMODULES="%s"' % (os.environ['LOADEDMODULES'])
 
         if export:
             print 'export %s' % (export)
 
 
-    elif cmd == 'unload':
-        for var in config.get('prepend', []):
-            if isinstance(config['prepend'][var], list):
-                for val in config['prepend'][var]:
-                    remove(var, val)
+    def unload(self):
+        for var in self.config.get('prepend', []):
+            if isinstance(self.config['prepend'][var], list):
+                for val in self.config['prepend'][var]:
+                    self.remove(var, val)
 
-            elif isinstance(config['prepend'][var], str):
-                remove(var, val)
+            elif isinstance(self.config['prepend'][var], str):
+                self.remove(var, self.config['prepend'][var])
 
-        remove('LOADEDMODULES', mod)
+        self.remove('LOADEDMODULES', mod)
 
 
-        export = ' '.join(['%s="%s"' % (i, os.environ[i]) for i in config['prepend'] if os.environ[i] != ''])
+        export = ' '.join(['%s="%s"' % (i, os.environ[i]) for i in self.config['prepend'] if os.environ[i] != ''])
         export += ' LOADEDMODULES="%s"' % (os.environ['LOADEDMODULES'])
 
         #TODO add regex for multiple '\:.*'
@@ -244,18 +218,52 @@ def main():
         if export:
             print 'export %s' % (export)
 
-        
-        unset = ' '.join(['%s' % (i) for i in config['prepend'] if os.environ[i] == ''])
+
+        unset = ' '.join(['%s' % (i) for i in self.config['prepend'] if os.environ[i] == ''])
         if unset:
             print "unset %s" % (unset)
 
 
+    def export(self):
+        self.load()
 
 
 
-if __name__=='__main__':
-    m = Module('gcc')
+
+
+
+if __name__ == '__main__':
+
+    if len(sys.argv) >= 2 and sys.argv[1] == 'debug':
+        print 'Argument List: %s' % (sys.argv)
+        DEBUG = True
+        args = sys.argv[2:]
+    else:
+        DEBUG = False
+        args = sys.argv[1:]
+
+
+    cmd = args[0] if len(args) >= 1 else None
+    mod = args[1] if len(args) >= 2 else None
+    vers = args[2] if len(args) >= 3 else None
+
+
+    cmd = 'load'
+    mod = 'gcc'
+    vers = '4.8.1'
+
+
+
+    m = Module(cmd, mod, vers)
     m.pp_config()
+    m.pp_resolved()
 
-    m.resolved()
+    m.export()
+
+
+
+
+
+
+
 

@@ -6,6 +6,7 @@ Better for user
  * More aestheticly pleasing listing of modules and version
  * (maybe) More informative tab completion
  * Can display a "Message of the day" to users given the module they load, which is very useful when planning upgrades or making changes to that module in particular
+ * Explicit display of version loaded by default
 
 Better for staff
  * Separates data and logic for installers
@@ -21,11 +22,13 @@ Possibly
 
 Usage
 -----
-kmodule load gcc
-kmodule load gcc 5.1
-kmodule unload gcc
-kmodule avail
-kmodule purge
+module load gcc
+module load gcc 5.1
+module load gcc/5.1
+module unload gcc
+module avail
+module purge
+
 
 How it works
 ------------
@@ -35,7 +38,7 @@ export PATH=/opt/share/gcc:/bin:etc:etc
 
 
 #Execute the output of k-env-modules
-kmodule (){ eval $(python k-env-modules.py $*); }
+module (){ eval $(python k-env-modules.py $*); }
 
 #debug module
 dmodule (){ echo $(python k-env-modules.py debug $*); }
