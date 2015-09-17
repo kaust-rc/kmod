@@ -5,8 +5,9 @@
 
 root: /opt/share/
 
-install_dir: /opt/share/$app/$version
+install_dir: /opt/share/$mod/$version
 
+app_dir: $root/$mod/$version
 
 
 

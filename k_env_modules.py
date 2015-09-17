@@ -26,8 +26,10 @@ class Module(object):
 
     def __init__(self, cmd=None, mod='common', vers=None):
 
+        self.mod = mod
+        self.version = vers
 
-        self.filename = mod + '.yaml'
+        self.filename = 'yaml/' + mod + '.yaml'
 
         self.load_yaml()
 
@@ -41,10 +43,31 @@ class Module(object):
             print cmd, mod, vers
             self.pp_config()
 
+        
+
+    def load_yaml_file(self, filename):
+        return yaml.load(file(filename))
+
+
+    def get_version(self):
+        if self.version:
+            return vers
+
+        if self.config.get('version', None):
+            return self.config['version']
+
 
 
     def load_yaml(self):
-        self.config = yaml.load(file(self.filename))
+        self.config = self.load_yaml_file('common.yaml')
+        self.config.update(self.load_yaml_file(self.filename))
+        self.config['mod'] = self.mod
+
+
+        
+        self.config['version'] = self.get_version()
+
+
 
 
     def pp_config(self):
@@ -248,9 +271,9 @@ if __name__ == '__main__':
     vers = args[2] if len(args) >= 3 else None
 
 
-    cmd = 'load'
-    mod = 'gcc'
-    vers = '4.8.1'
+#    cmd = 'load'
+#    mod = 'gcc'
+#    vers = '4.8.1'
 
 
 
