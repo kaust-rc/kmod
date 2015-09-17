@@ -44,3 +44,15 @@ module (){ eval $(python k-env-modules.py $*); }
 dmodule (){ echo $(python k-env-modules.py debug $*); }
 
 
+
+
+TODO Notes: 
+Maintain documentation in same directory
+Maintain install notes/scripts in same directory
+Maintain test scripts in the same directory
+Make contents of yaml file available to users
+
+
+
+
+

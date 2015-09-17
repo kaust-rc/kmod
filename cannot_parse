@@ -1,0 +1,99 @@
+/opt/share/modules/applications-extra/maxwell/.base
+Cannot Parse "if { [string first ".el" [uname release]] == -1 } {"
+Cannot Parse "puts stderr "Maxwell is not supported on this platform. Please use it on RHEL-based system (e.g. Noor).""
+Cannot Parse "exit"
+
+
+/opt/share/modules/applications-extra/adf/.base
+Cannot Parse "if { [string first "Ubuntu" [uname release]] != -1 } {"
+Cannot Parse "if { [string first ".el" [uname release]] != -1 } {"
+
+
+/opt/share/modules/applications-extra/psi4/.base
+Cannot Parse "if { [string first ".el6" [uname release]] == -1 } {"
+Cannot Parse "puts stderr "PSI4 is not supported on this platform. Please use it on a RHEL-based system (e.g. Noor)""
+Cannot Parse "exit"
+
+
+/opt/share/modules/applications-extra/visit/.base
+Cannot Parse "if {$files != ""} {"
+Cannot Parse "foreach filename $files {"
+Cannot Parse "if {$bin != ""} {"
+Cannot Parse "if {$lib != ""} {"
+
+
+/opt/share/modules/applications-extra/gaussian/.base
+Cannot Parse "if { [info exists env(TMPDIR)] } {"
+
+
+/opt/share/modules/applications-extra/grads/.base
+Cannot Parse "if { [info exists env(GRADS_ROOT)] } {"
+Cannot Parse "if { [info exists env(KAUST_APPS_ROOT)] } {"
+
+
+/opt/share/modules/applications-extra/abaqus/.base
+Cannot Parse "if { ![info exists env(TMPDIR)] } {"
+
+
+/opt/share/modules/applications-extra/materials-studio/.base
+Cannot Parse "if { [string first ".el6" [uname release]] == -1 } {"
+Cannot Parse "puts stderr "Materials Studio is not supported on this platform. Please use it on a RHEL-based system (e.g. Noor)""
+Cannot Parse "exit"
+
+
+/opt/share/modules/applications-extra/hfss/.base
+Cannot Parse "if { [string first ".el" [uname release]] == -1 } {"
+Cannot Parse "puts stderr "HFSS is not supported on this platform.  Please use HFSS on Noor.""
+Cannot Parse "exit"
+
+
+/opt/share/modules/applications-extra/siesta/.base
+Cannot Parse "if { [string first ".el" [uname release]] == -1 } {"
+Cannot Parse "puts stderr "Siesta is not currently supported on this platform.  Please use Siesta on Noor.""
+Cannot Parse "exit"
+
+
+/opt/share/modules/applications-extra/quantumespresso/.base
+Cannot Parse "if [ regexp -nocase {5.1.1} $version ] then {"
+Cannot Parse "if [ regexp -nocase {5.0.2} $version ] then {"
+
+
+/opt/share/modules/applications-extra/paraview/.base
+Cannot Parse "if [ module-info mode load ] {"
+Cannot Parse "puts stderr "Loading servers configurations...""
+Cannot Parse "exec /opt/share/paraview/KAUST/bin/updateservers &"
+Cannot Parse "puts stderr "Servers configurations loaded.""
+
+
+/opt/share/modules/applications-extra/matlab/.base
+Cannot Parse "if { [string first ".el" [uname release]] == -1 } {"
+Cannot Parse "if { [string match "6.0" $release] == 1 } {"
+
+
+/opt/share/modules/applications-extra/knit/.base
+Cannot Parse "if { [info exists env(KNIT_ROOT)] } {"
+Cannot Parse "if { [info exists env(KAUST_APPS_ROOT)] } {"
+
+
+/opt/share/modules/applications-extra/smeagol/.base
+Cannot Parse "if { [string first ".el5" [uname release]] == -1 } {"
+Cannot Parse "puts stderr "$name is not currently supported on FC11.  Please use $name on Noor.""
+Cannot Parse "exit"
+Cannot Parse "if { [info exists env(SMEAGOL_ROOT)] } {"
+Cannot Parse "if { [info exists env(KAUST_APPS_ROOT)] } {"
+
+
+/opt/share/modules/applications-extra/vesta/.base
+Cannot Parse "if { [string first ".el" [uname release]] == -1 } {"
+
+
+/opt/share/modules/applications-extra/molpro/.base
+Cannot Parse "if { [string first ".el6" [uname release]] == -1 } {"
+Cannot Parse "puts stderr "Molpro is not supported on this platform. Please use it on a RHEL-based system (e.g. Noor)""
+Cannot Parse "exit"
+
+
+/opt/share/modules/applications-extra/ansys/.base
+Cannot Parse "puts stderr "$app_dir""
+
+

@@ -18,11 +18,10 @@ MAP = {'append-path': 'append',
 
 
 ignore = [
-    "source [file dirname $::ModulesCurrentModulefile]/../../common/common_setup2.tcl",
-    "source [file dirname $::ModulesCurrentModulefile]/../../common/common_setup2.tcl",
+    "common_setup",
     "GeneralAppSetup",
     "} else {",
-    "}",
+    "module load",
     ]
 
 def add2list(param, config):
@@ -80,9 +79,11 @@ def parsit(mod, filename):
                 continue
 
             for i in ignore:
-                if i == line:
+                if i in line:
                     ignoreme = True
             if ignoreme:
+                continue
+            if line.startswith("}"):
                 continue
 
 
