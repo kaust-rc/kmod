@@ -1,73 +1,233 @@
 #!/usr/bin/env python
 
+__author__ = "Niall OByrnes"
+__version__ = "0.0.1"
+
+
 import os
 import re
 import sys
 import yaml
 import pprint
 
+from help_text import help_text
+
+#import logging
+#logging.basicConfig(level=logging.DEBUG,
+#       format='%(asctime)s %(levelname)s %(message)s')
+
 
 #module [cmd]  a list of the allowable commands
-cmds = ['load', 'unload', 'show', 'avail', 'purge', 'list']
+cmds = ['load', 'unload', 'show', 'avail', 'purge', 'list', 'help', 'version']
+
+#Admin command
+acmds = ['report', 'validate']
+
 
 #Keywords reserved for module application
-keywords = ['prepend', 'append', 'setenv', 'prereq', 'postreq', 'conflict', 'alias']
+keyword_strings = ['setenv']
+keyword_lists = ['prepend', 'append', 'prereq', 'postreq', 'conflict', 'alias']
 
 #Parameters reserved for module application
-meta = ['groups', 'bundles', 'name', 'versions', 'preload-yaml', 'verbosity']
+meta_strings = ['name', 'default_version']#, 'verbosity']
+meta_lists = ['groups', 'bundles', 'versions', 'preload-yaml',]
 
-#Parameters forbidden, potentially make these available
-forbidden = ['group', 'bundle', ]  #version, name???
+#Give error for these for now
+confusion = ['names', 'bundle', 'group']
 
+#Module program keywords
+mod_keywords = ['version', 'case']
+
+
+
+#TODO should be picked up from admin.yaml, or an environment variable or something
+#DIR = '/opt/share/kmodules/'
+#DIR = 'yaml/'
+DIR = 'tests/'
 
 
 class Module(object):
 
 
-    def __init__(self, cmd=None, mod='common', vers=None):
+    def __init__(self, cmd='help', mod='', vers=''):
 
+        self.cmd = cmd
         self.mod = mod
-        self.version = vers
+        self.req_version = vers
 
-        self.filename = 'yaml/' + mod + '.yaml'
 
-        self.load_yaml()
+        self.call_function() 
 
+
+    def _echo(self, msg):
+        """
+        The output of this program is run (eval) from a bash function so,
+            any output text should be echo'd
+        """
+        print "echo %s" % msg
+
+
+    def _export(self, export):
+        """
+        The output of this program is run (eval) from a bash function so,
+            any output should be exported 
+        """
+        print "export %s" % export
+
+
+    def _error(self, msg):
+        """
+        Should print to stderr???
+        """
+        self._echo(msg)
+        exit(1)
+
+
+    def call_function(self):
+        """
+        Checks and calls the function from the args
+
+        With only a short number of commands, there are no overlap of
+        switches and commands so its easy to jsut duplicate every
+        command with a switch
+
+        If more comands are added then maybe move to getopt    
+        """
+        cmd = self.cmd.replace('-', '')
+        cmd = cmd.lower().strip()
+
+        switch = [i[0] for i in cmds]
+        if cmd in cmds:
+            getattr(self, '_'+cmd)()
+
+        elif cmd in switch:
+            cmd = cmds[ switch.index(cmd) ]
+            getattr(self, '_'+cmd)()
+
+        else:
+            self._error("ERROR: subcommand '%s' not recognised\n" % (cmd))
+
+
+    def _help(self):
+        """
+        Prints the help message
+        """
+        self._echo(help_text())
+
+
+    def _version(self):
+        """
+        Prints the version
+        """
+        self._echo("VERSION=%s" % __version__)
+
+
+    def load_yaml_file(self, filename):
+        """
+        Errors should be ignored but logged.
+        """
+        self.filename = DIR + self.mod + '.yaml'
+        try:
+            config =  yaml.load(file(filename))
+
+        except:
+            self._error("cannot open module file %s" % self.filename)
+            
+
+        #TODO, some error checking, eg if file exists
+        return config
+
+
+
+
+    def _get_version(self):
+        """
+        If the same yaml file is used for multiple versions, then the version 
+        keyword will be the loaded (or default) version
+
+        default_version is the default version
+        versions are the allowed versions
+
+        if the user does module load version, then this version
+            takes precedence of version, and is used as the macro $version 
+
+        """
+        if self.req_version:
+            if 'versions' in self.config:
+                if self.req_version not in self.config['versions']:
+
+                    msg = "Requested version %s not available for %s.\n" % (self.req_version, self.mod)
+                    msg += "Versions available %s" % (', '.join(self.config['versions']))
+                    self._error(msg)
+                else:
+                    self.config['version'] = self.req_version
+
+
+        elif 'default_version' in self.config:
+            if 'versions' in self.config:
+                if self.config['default_version'] not in self.config['versions']:
+
+                    msg = "Error in module file, default version %s not available for %s.\n" % (self.config['default_version'], self.mod)
+                    self._error(msg)
+
+            self.config['version'] = self.config['default_version']
+
+        else:
+            #Cannot determine any version
+            self.config['version'] = 'version_unavailable'
+            return
+
+
+    def load_config(self):
+        """
+        Loads the yaml file and interpolates the macro variables
+        """
+        self.config = self.load_yaml_file(DIR+'common.yaml')
+        self.config.update(self.load_yaml_file(self.filename))
 
         self.validate_config()
 
-        #sets self.macros = macro variables, ie not keywords or meta info
-        self.get_macros()
+        self._get_version()
 
-        if DEBUG:
-            print cmd, mod, vers
-            self.pp_config()
-
-        
-
-    def load_yaml_file(self, filename):
-        return yaml.load(file(filename))
-
-
-    def get_version(self):
-        if self.version:
-            return vers
-
-        if self.config.get('version', None):
-            return self.config['version']
+        self.interpolate_macros()
 
 
 
-    def load_yaml(self):
-        self.config = self.load_yaml_file('common.yaml')
-        self.config.update(self.load_yaml_file(self.filename))
-        self.config['mod'] = self.mod
+    def validate_config(self):
+        for i in mod_keywords:
+            if i in self.config:
+                raise Exception
+        for i in confusion:
+            if i in self.config:
+                raise Exception
 
 
-        
-        self.config['version'] = self.get_version()
+    def correct_types_in_config(self):
+        """
+        Ensure, setenv are strings
+                prepend, postpend are lists
+        Validate is more indept and is found in KModule
+        """
+        for i in keyword_lists:
+            for l in self.config.get(i, list()):
+                if isinstance(self.config[i][l], str):
+                    self.config[i][l] = [ self.config[i][l] ]
 
+        for i in keyword_strings:
+            for s in self.config.get(i, ''):
+                if isinstance(self.config[i][s], list):
 
+                    #Takes the first entry
+                    if len(self.config[i][s]) >= 1:
+                        print "ERROR: Truncated %s %s" % (i, s)
+                        self.config[i][s] = self.config[i][s][0]
+                    else:
+                        self.config[i][s] = ''
+
+        #Ensure all macros are strings
+        macs = self._get_macros()
+        for i in macs:
+            self.config[i] = str(self.config[i])
 
 
     def pp_config(self):
@@ -75,66 +235,78 @@ class Module(object):
         self.pp.pprint(self.config)
 
 
-    def validate_config(self):
-        for i in self.config.keys():
-            if '$' in i:
-                print i*5
-                raise Exception
-        for i in forbidden:
-            if i in self.config:
-                print i*5
-                raise Exception
-
-
-    def get_macros(self):
-        tmp = [i for i in self.config]# if i not in meta]
-        tmp = [i for i in tmp if i not in keywords]
-
-        self.macros = dict()
-        for i in tmp:
-            self.macros[i] = str(self.config[i])
-
-        for i in tmp:
-            self.macros[i] = self.interpolate_macros(self.macros[i])
-
-
-
-    def interpolate_macros(self, val):
+    def _get_macros(self):
         """
-        Interpolates the macros themselves,
-            if they contain macros in each other
+        The kwywords normally take a list, so it couldnt be used as a macro;
+        Possible exception with setenv, as its just one variable.  However,
+        if someone wants to use it as a macro, then set a macro and put
+        the macro in the setenv
+
+        Also macro variables must be a string
         """
-        #If there are more than 20 deep macros then change the yamp
-        for i in range(20):
+        tmp = [i for i in self.config
+                if i not in keyword_lists and 
+                   i not in keyword_strings and
+                   #i not in meta_strings and
+                   i not in meta_lists and
+                   not isinstance(self.config[i], dict) and
+                   not isinstance(self.config[i], list)
+                   ]
 
-            val = self.interpolate(val)
-            if '$' not in val:
-                return val
 
-        raise Exception("Too much depth in recursion")
+        return tmp
 
 
-    def interpolate(self, val):
+
+    def interpolate_macros(self):
+        """
+        Scans all parameters and inserts the macros
+        """
+        self.correct_types_in_config()
+
+        #Possible macros
+        macs = self._get_macros()
+
+        for i in macs:
+            if '$' in self.config[i]:
+                self.config[i] = self.interpolate(i, self.config[i])
+
+        #now test keywords
+        for k in keyword_lists:
+            if k not in self.config:
+                continue
+            for l in self.config[k]:
+                for i,v in enumerate(self.config[k][l]):
+                    if '$' in v:
+                        self.config[k][l][i] = self.interpolate('atest', v)
+
+
+    def interpolate(self, var, val):
         """
         Scans the val for macro variables, and substitutes
         """
-        found = [ i[1:] for i in val.split('/') if i.startswith('$')]
-
-        if not found:
-            print 'not found ', val
+        if '$' not in val:
             return val
+
+        found = [ i[1:] for i in val.split('/') if i.startswith('$')]
+        if var in found:
+            self._error("Circular References in %s" % var)
 
         notfound = list()
         for i in found:
-            if i in self.macros:
-                val = val.replace('$' + i, self.macros[i])
+            if i in self.config:
+                val = val.replace('$' + i, self.config[i])
             else:
                 notfound.append(i)
 
         if notfound:
-            print 'ERROR ' + str(notfound) + 'not in macros'
-            raise Exception
+            self._error('ERROR %s not in macros' % (notfound))
 
+        if '$' in val:
+            val = self.interpolate(var, val)
+
+        #TODO This will remove duplicate /'s But should it just report error???
+        val = re.sub(r'\/{2,}', '/', val)
         return val
 
 
@@ -176,14 +348,16 @@ class Module(object):
         print self.interpolate(path)
 
 
-    def prepend(self, env, val):
-        if env not in os.environ:
-            os.environ[env] = val
-            return
+    def _prepend(self, env, val):
+        os.environ[env] = "%s:%s" % (val, os.environ.get(env, ''))
 
-        envvar = os.environ[env].split(':')
-        envvar.insert(0, val)
-        os.environ[env] = ':'.join(envvar)
+    def _append(self, env, val):
+        os.environ[env] = "%s:%s" % (os.environ.get(env, ''), val)
+
+    def _alias(self, env, val):
+        alias = "%s='%s'" % (env, val)
+
+
 
 
     def remove(self, env, val):
@@ -201,36 +375,55 @@ class Module(object):
 
 
 
-    def load(self):
+    def _load(self):
+        """
+        Executes the module load command
+        """
+        if not self.mod:
+            self._error("Error: no module")
 
+        self.load_config()
+
+        export_set = set('LOADEDMODULES')
+
+        for env in self.config.get('prepend', []):
+            for val in self.config['prepend'][env]:
+                self._prepend(env, val)
+                export_set.update(env)
+
+        for env in self.config.get('append', []):
+            for val in self.config['append'][env]:
+                self._append(env, val)
+                export_set.update(env)
+
+        for alias in self.config.get('alias', []):
+            for val in self.config['alias'][alias]:
+                pass
+
+
+        self._append('LOADEDMODULES', self.mod)
+
+
+        for i in export_set:
+            export += ' '.join(['%s="%s"' % (i, os.environ[i]))
+
+
+        self._export(export)
+
+
+
+
+
+
+
+
+    def _unload(self):
         for var in self.config.get('prepend', []):
-            if isinstance(self.config['prepend'][var], list):
-                for val in self.config['prepend'][var]:
-                    self.prepend(var, val)
-
-            elif isinstance(self.config['prepend'][var], str):
-                self.prepend(var, self.config['prepend'][var])
-
-        self.prepend('LOADEDMODULES', mod)
+            for val in self.config['prepend'][var]:
+                self.remove(var, val)
 
 
-        export = ' '.join(['%s="%s"' % (i, os.environ[i]) for i in self.config['prepend']])
-        export += ' LOADEDMODULES="%s"' % (os.environ['LOADEDMODULES'])
-
-        if export:
-            print 'export %s' % (export)
-
-
-    def unload(self):
-        for var in self.config.get('prepend', []):
-            if isinstance(self.config['prepend'][var], list):
-                for val in self.config['prepend'][var]:
-                    self.remove(var, val)
-
-            elif isinstance(self.config['prepend'][var], str):
-                self.remove(var, self.config['prepend'][var])
-
-        self.remove('LOADEDMODULES', mod)
+        self.remove('LOADEDMODULES', self.mod)
 
 
         export = ' '.join(['%s="%s"' % (i, os.environ[i]) for i in self.config['prepend'] if os.environ[i] != ''])
@@ -247,9 +440,40 @@ class Module(object):
             print "unset %s" % (unset)
 
 
-    def export(self):
-        self.load()
 
+
+
+class KModule(Module):
+
+    def __init__(self, *args, **kwargs):
+        super(ChildB, self).__init__(*args[1:], **kwargs)
+
+        print cmd, mod, vers
+        self.pp_config()
+
+
+        self.validate_config()
+
+    def validate_config(self):
+        for i in self.config.keys():
+            if '$' in i:
+                print i*5
+                raise Exception
+        for i in forbidden:
+            if i in self.config:
+                print i*5
+                raise Exception
+
+
+    def load(self):
+        """
+        Prints a formatted version of config
+        """
+
+        export = self._load()
+
+        #prittyprint
+        print 'export %s' % (export)
 
 
 
@@ -257,36 +481,21 @@ class Module(object):
 
 if __name__ == '__main__':
 
-    if len(sys.argv) >= 2 and sys.argv[1] == 'debug':
-        print 'Argument List: %s' % (sys.argv)
-        DEBUG = True
-        args = sys.argv[2:]
+
+
+
+    if len(sys.argv) > 1 and sys.argv[1] == 'debug':
+        m = KModule(*sys.argv[2:])
     else:
-        DEBUG = False
-        args = sys.argv[1:]
+        m = Module(*sys.argv[1:])
 
+    #debug
+    #m = Module('load', 'gcc', '4.8.1')
 
-    cmd = args[0] if len(args) >= 1 else None
-    mod = args[1] if len(args) >= 2 else None
-    vers = args[2] if len(args) >= 3 else None
+    #m.pp_config()
+    #m.pp_resolved()
 
-
-#    cmd = 'load'
-#    mod = 'gcc'
-#    vers = '4.8.1'
-
-
-
-    m = Module(cmd, mod, vers)
-    m.pp_config()
-    m.pp_resolved()
-
-    m.export()
-
-
-
-
-
+    #m.export()
 
 
 
