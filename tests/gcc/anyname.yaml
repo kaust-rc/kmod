@@ -1,0 +1,12 @@
+
+name: gcc
+
+preload_yaml: [gcc_v99.yaml]
+
+versions: 4.8.1
+
+arch: x86_64
+
+gmp_version: 9.9.9
+binutils_ver: 9.99
+

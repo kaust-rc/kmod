@@ -5,11 +5,9 @@ preload-yaml: [common.yaml, compiler-common.yaml]
 
 name: gcc
 
-versions: [4.8.1]
-
-#versions:
-# - 4.8.0
-# - 5.1.0
+versions:
+ - 4.8.0
+ - 5.1.0
 
 verbosity: vvv
 
@@ -45,7 +43,8 @@ module: $module_name
 mkl_root: $app_dir/mkl
 ipp_root: $app_dir/ipp/em64t
 
-
+alias:
+    a: echo hello
 
 setenv:
     MKLROOT: mkl_root

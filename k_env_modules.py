@@ -10,6 +10,9 @@ import sys
 import yaml
 import pprint
 
+import collections # requires Python 2.7 -- see note below if you're using an earlier version
+
+
 from help_text import help_text
 
 #import logging
@@ -74,12 +77,16 @@ class Module(object):
         """
         print "export %s" % export
 
+    def _eval(self, cmds):
+        print cmds
+
+
 
     def _error(self, msg):
         """
         Should print to stderr???
         """
-        self._echo(msg)
+        self._echo('ERROR: ' + msg)
         exit(1)
 
 
@@ -122,16 +129,26 @@ class Module(object):
         self._echo("VERSION=%s" % __version__)
 
 
+    def load_yaml_as_text(self, filename):
+        try:
+            with open(filename) as f:
+                text =  f.read()
+        except:
+            self._error("cannot open module file %s" % self.filename)
+
+        return text            
+
+
+
     def load_yaml_file(self, filename):
         """
         Errors should be ignored but logged.
         """
-        self.filename = DIR + self.mod + '.yaml'
         try:
-            config =  yaml.load(file(filename))
+            config =  yaml.load(file(DIR+filename))
 
         except:
-            self._error("cannot open module file %s" % self.filename)
+            self._error("cannot open module file %s" % filename)
             
 
         #TODO, some error checking, eg if file exists
@@ -173,17 +190,92 @@ class Module(object):
             self.config['version'] = self.config['default_version']
 
         else:
+            if '$version' in self.load_yaml_as_text(self.filename):
+                self._error("Version used in module file, yet, version could not be determined."
+                                    "\n Use default_version or load a version.")
             #Cannot determine any version
             self.config['version'] = 'version_unavailable'
             return
+
+
+
+    def upsert(self, d1, d2):
+        """
+        Modifies d1 in-place to contain values from d2.  If any value
+        in d1 is a dictionary (or dict-like), *and* the corresponding
+        value in d2 is also a dictionary, then merge them in-place.
+        http://stackoverflow.com/questions/10703858/
+                                python-merge-multi-level-dictionaries
+        Python 2.7 minimum
+        """
+        for k, v2 in d2.items():
+            v1 = d1.get(k) # returns None if v1 has no value for this key
+            if ( isinstance(v1, collections.Mapping) and 
+                 isinstance(v2, collections.Mapping) ):
+                upsert(v1, v2)
+            else:
+                d1[k] = v2
+
+
+
+    def load_mod_files(self):
+        """
+        Takes care of searching and loading the module files
+        and overwriting the inheritance
+
+        Maybe get more involved later, for now look at mod*.yaml and mod/*.yaml
+
+        Consider including a preload-version
+        """
+
+        self.config = self.load_yaml_file('kmodule.yaml')
+
+        #check all files with 'mod' in name
+        modfiles = [i for i in os.listdir(DIR) if self.mod in i and i.endswith('.yaml')]
+
+
+
+        
+        #And check for all files in a directory mod
+        if os.path.isdir(DIR + self.mod):
+            modfiles.extend([self.mod+'/'+i for i in os.listdir(DIR+self.mod) if i.endswith('.yaml')])
+
+
+        chain = list()
+        for f in modfiles:
+            tmp = self.load_yaml_file(f)
+            if self.req_version in tmp.get('versions', []):
+                if len(chain) > 0:
+                    self._error("At least more than one module file for version %s found." % self.req_version)
+                    raise Exception
+                chain.append(f)
+
+
+        def inherit(chain, filename):
+            tmp = self.load_yaml_file(filename)
+            if tmp.get('preload_yaml', None):
+                
+                chain.extend(tmp['preload_yaml'])
+
+                for i in tmp['preload_yaml']:
+                    inherit(chain, i)
+
+
+        inherit(chain, chain[0])
+
+
+        #Reverse the chain
+        for f in chain[::-1]:
+            self.upsert(self.config, self.load_yaml_file( f ))
+
 
 
     def load_config(self):
         """
         Loads the yaml file and interpolates the macro variables
         """
-        self.config = self.load_yaml_file(DIR+'common.yaml')
-        self.config.update(self.load_yaml_file(self.filename))
+
+        self.load_mod_files()
 
         self.validate_config()
 
@@ -383,35 +475,43 @@ class Module(object):
             self._error("Error: no module")
 
         self.load_config()
+        evaltxt = ''
 
-        export_set = set('LOADEDMODULES')
+        export_set = set(['LOADEDMODULES'])
+
+        self._append('LOADEDMODULES', self.mod)
 
         for env in self.config.get('prepend', []):
             for val in self.config['prepend'][env]:
                 self._prepend(env, val)
-                export_set.update(env)
+                export_set.add(env)
 
         for env in self.config.get('append', []):
             for val in self.config['append'][env]:
                 self._append(env, val)
-                export_set.update(env)
+                export_set.add(env)
 
+        export = ""
+        for i in export_set:
+            export += '%s="%s" ' % (i, os.environ[i])
+
+
+        alias = ""
         for alias in self.config.get('alias', []):
             for val in self.config['alias'][alias]:
-                pass
+                alias += '%s="%s" ' % (alias, val)
 
 
-        self._append('LOADEDMODULES', self.mod)
+        if export:
+            evaltxt = 'export ' + export
+        if alias:
+            if evaltxt:
+                evaltxt = "%s ; alias %s" % (evaltxt, alias)
+            else:
+                evaltxt = "alias %s" % (alias)
 
 
-        for i in export_set:
-            export += ' '.join(['%s="%s"' % (i, os.environ[i]))
-
-
-        self._export(export)
-
-
-
+        self._eval(evaltxt)
 
 
 
