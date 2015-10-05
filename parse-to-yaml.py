@@ -62,7 +62,7 @@ def additem(param, config):
 
 def parsit(mod, filename):
     config = dict()
-    with open(filename) as f:
+    with open(filename + '/.base') as f:
         cannot_parse = list()
 
         for line in f:
@@ -114,13 +114,41 @@ def parsit(mod, filename):
                 cannot_parse.append('Cannot Parse "%s"' % line)
 
 
+    config['module'] = mod
+    config['groups'] = ['applications']
+
+
+    # Versions, need to check links then create yaml file for every .base*
+    # report the apps with multiple bases IN USE  ie links to multiple base
+    #os.path.islink('SE-10.1b')
+    #>> os.readlink('SE-10.1b')
+    #'.base'
+
+
+    config['versions'] = list()
+
+    base = list()
+    for i in os.listdir(filename):
+        if not os.path.islink(filename + '/' + i):
+            continue
+        
+#        print mod + '  version  ' + i
+        config['versions'].append(i)
+
+        if i.startswith('.base'):
+            base.append(i)
+    if len(base) > 1:
+        print mod, base
+
+
+
     with open('yaml/' + mod + '.yaml', 'w') as outfile:
         outfile.write( yaml.dump(config, default_flow_style=False))
             
-    if cannot_parse:
-        print filename
-        print '\n'.join(cannot_parse)
-        print '\n'
+#    if cannot_parse:
+#        print filename
+#        print '\n'.join(cannot_parse)
+#        print '\n'
 
 
 root = '/opt/share/modules/applications-extra/'
@@ -128,7 +156,7 @@ dirs = os.listdir(root)
 
 
 for d in dirs:
-    filename = root + d + '/.base'
+    filename = root + d
     parsit(d, filename)
 
     #pp = pprint.PrettyPrinter(indent=4)
