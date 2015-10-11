@@ -440,11 +440,14 @@ class Module(object):
         print self.interpolate(path)
 
 
+
     def _prepend(self, env, val):
         os.environ[env] = "%s:%s" % (val, os.environ.get(env, ''))
 
+
     def _append(self, env, val):
         os.environ[env] = "%s:%s" % (os.environ.get(env, ''), val)
+
 
     def _alias(self, env, val):
         alias = "%s='%s'" % (env, val)

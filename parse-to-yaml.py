@@ -24,17 +24,21 @@ ignore = [
     "module load",
     ]
 
+
 def add2list(param, config):
-    name, val = param[:2]
+    """
+    conflict a b c
+    prereq a
+    """
+
+    name, val = param[0], param[1:]
     name = MAP[name]
 
-    if name not in config:
-        config[name] = dict()
 
-    if val in config[name]:
-        config[name].append(val)
+    if name in config:
+        config[name].extend(val)
     else:
-        config[name] = [val] 
+        config[name] = val
 
 
 
@@ -62,7 +66,7 @@ def additem(param, config):
 
 
 
-def get_default(root, mod):
+def get_default(root, grp, mod):
     """
     Gets the defualt version from the file .modulerc from the 
     format like this:
@@ -70,10 +74,10 @@ def get_default(root, mod):
     module-version netcdf/4.1.3 default
     """
     try:
-        with open(root + mod + '/.modulerc', 'r') as desc:
+        with open(root + grp + '/' + mod + '/.modulerc', 'r') as desc:
             line = desc.readlines()
     except:
-        return None
+        return ''
 
     line = line[1] if line[1] != '\n' else line[2]
 
@@ -81,14 +85,34 @@ def get_default(root, mod):
     return default
 
 
-def parse_base(root, mod, basefile, grp):
 
+
+
+def parse_base(basefile, mod):
 
     config = dict()
-    with open(root + '/' + mod + '/' + basefile) as f:
+    
+    grp = basefile.split('-')[0]
+    grp = grp.split('/')[-1]
+
+
+    with open(basefile) as f:
+        if '$app_dir' in f.read():
+            config['app_dir'] = '/opt/share/module/' + mod
+
+
+
+    with open(basefile) as f:
         cannot_parse = list()
 
         for line in f:
+            
+            #Replace some old function variables
+            line = line.replace('module_name', 'module')
+            line = line.replace('${app_dir}', '$app_dir')
+            line = line.replace('${version}', '$version')
+
+
             ignoreme = False
             line = line.strip()
             param = line.split()
@@ -100,6 +124,7 @@ def parse_base(root, mod, basefile, grp):
 
             if line.startswith('if ![is-loaded'):
                 continue
+
 
             for i in ignore:
                 if i in line:
@@ -137,11 +162,16 @@ def parse_base(root, mod, basefile, grp):
                 cannot_parse.append('Cannot Parse "%s"' % line)
 
 
-    config['module'] = mod
-    config['versions'] = versions[mod][basefile]
-    config['default_version'] = get_default(root, mod)
 
-    config['groups'] = [grp]
+
+
+    config['module'] = mod
+    config['versions'] = versions[mod][basefile].keys()
+    config['default_version'] = get_default(root, grp, mod)
+
+
+    #TODO Fix this
+    config['groups'] = versions[mod][basefile].keys()
 
 
     try:
@@ -156,7 +186,7 @@ def parse_base(root, mod, basefile, grp):
 
     #Write the file to disc
     if len(versions[mod]) > 1:
-        filename = 'yaml/' + mod + basefile + '.yaml'
+        filename = 'yaml/' + mod + basefile.split('/')[-1] + '.yaml'
     else:
         filename = 'yaml/' + mod + '.yaml'
 
@@ -184,24 +214,31 @@ def get_versions(root, grp, mod):
 
     {mod: {basefile : [list, of, versions], groups: group}
 
+
+    TODO: FIGURE OUT WHAT TO DO WITH AVAIL and module load extra
+
     """
-    versions[mod] = {'groups': grp + '-extra'}
+    versions[mod] = dict()
 
-    d = root + grp + '-extra/' + mod
-
-    for i in os.listdir(d):
-        if not os.path.islink(d + '/' + i):
+    d1 = root + grp + '-extra/' + mod
+    d2 = root + grp + '/' + mod
+    for v in os.listdir(d1):
+        if not os.path.islink(d1 + '/' + v):
             continue
 
-        link = os.readlink(d + '/' + i)
+        base = os.readlink(d1 + '/' + v)
 
-        if link not in versions[mod]:
-            versions[mod][link] = list()
+        base = d1 + '/' + base
 
-        versions[mod][link].append(i)
+        if base not in versions[mod]:
+            versions[mod][base] = dict()
 
-    # TODO Test if any versions in groups
+        
+        versions[mod][base][v] = [grp+'-extra']
 
+
+        if os.path.islink(d2 + '/' + v):
+            versions[mod][base][v].append(grp)
 
 
 
@@ -213,29 +250,31 @@ pp = pprint.PrettyPrinter(indent=4)
 root = '/opt/share/modules/' 
 
 for r in ['applications', 'compilers', 'libs']:
-    mods = os.listdir(root + r)
+
+    mods = os.listdir(root + r + '-extra/')
     for m in mods:
         get_versions(root, r, m)
 
-
+#Print the version data
 pp.pprint(versions)
+
+
 for mod in versions:
     for basefile in versions[mod]:
-        if basefile == 'groups':
-            continue
-        root = '/opt/share/modules/' + versions[mod]['groups']
-        print 'parsing', root, mod, basefile
 
-        data[mod] = parse_base(root, mod, basefile, r)
+        data[mod] = parse_base(basefile, mod)
             
-exit()
 
-pp.pprint(data)
+#pp.pprint(data)
 
 
 
 
 for i in versions:
-    if len(versions[i])>1:
+    if len(versions[i]) > 1:
         print 'multiple versions of module ', i
+
+
+
+
 
