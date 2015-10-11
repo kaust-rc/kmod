@@ -60,9 +60,32 @@ def additem(param, config):
 
     config[name][key] = val
 
-def parsit(mod, filename):
+
+
+def get_default(root, mod):
+    """
+    Gets the defualt version from the file .modulerc from the 
+    format like this:
+
+    module-version netcdf/4.1.3 default
+    """
+    try:
+        with open(root + mod + '/.modulerc', 'r') as desc:
+            line = desc.readlines()
+    except:
+        return None
+
+    line = line[1] if line[1] != '\n' else line[2]
+
+    default = line.split()[1].split('/')[1]
+    return default
+
+
+def parse_base(root, mod, basefile, grp):
+
+
     config = dict()
-    with open(filename + '/.base') as f:
+    with open(root + '/' + mod + '/' + basefile) as f:
         cannot_parse = list()
 
         for line in f:
@@ -115,52 +138,104 @@ def parsit(mod, filename):
 
 
     config['module'] = mod
-    config['groups'] = ['applications']
+    config['versions'] = versions[mod][basefile]
+    config['default_version'] = get_default(root, mod)
+
+    config['groups'] = [grp]
 
 
-    # Versions, need to check links then create yaml file for every .base*
-    # report the apps with multiple bases IN USE  ie links to multiple base
-    #os.path.islink('SE-10.1b')
-    #>> os.readlink('SE-10.1b')
-    #'.base'
-
-
-    config['versions'] = list()
-
-    base = list()
-    for i in os.listdir(filename):
-        if not os.path.islink(filename + '/' + i):
-            continue
-        
-#        print mod + '  version  ' + i
-        config['versions'].append(i)
-
-        if i.startswith('.base'):
-            base.append(i)
-    if len(base) > 1:
-        print mod, base
+    try:
+        with open(root + mod + '/.desc', 'r') as desc:
+            desc = desc.read()
+    except:
+        desc = ''
+    config['desc'] = desc.strip()
 
 
 
-    with open('yaml/' + mod + '.yaml', 'w') as outfile:
+
+    #Write the file to disc
+    if len(versions[mod]) > 1:
+        filename = 'yaml/' + mod + basefile + '.yaml'
+    else:
+        filename = 'yaml/' + mod + '.yaml'
+
+
+    with open(filename, 'w') as outfile:
         outfile.write( yaml.dump(config, default_flow_style=False))
             
+
+
+    return config
+
+
+
 #    if cannot_parse:
 #        print filename
 #        print '\n'.join(cannot_parse)
 #        print '\n'
 
 
-root = '/opt/share/modules/applications-extra/'
-dirs = os.listdir(root)
 
 
-for d in dirs:
-    filename = root + d
-    parsit(d, filename)
+def get_versions(root, grp, mod):
+    """
+    Scans the module directory and build the version dict 
 
-    #pp = pprint.PrettyPrinter(indent=4)
-    #pp.pprint(config)
+    {mod: {basefile : [list, of, versions], groups: group}
+
+    """
+    versions[mod] = {'groups': grp + '-extra'}
+
+    d = root + grp + '-extra/' + mod
+
+    for i in os.listdir(d):
+        if not os.path.islink(d + '/' + i):
+            continue
+
+        link = os.readlink(d + '/' + i)
+
+        if link not in versions[mod]:
+            versions[mod][link] = list()
+
+        versions[mod][link].append(i)
+
+    # TODO Test if any versions in groups
 
 
+
+
+
+
+data = dict()
+versions = dict()
+pp = pprint.PrettyPrinter(indent=4)
+root = '/opt/share/modules/' 
+
+for r in ['applications', 'compilers', 'libs']:
+    mods = os.listdir(root + r)
+    for m in mods:
+        get_versions(root, r, m)
+
+
+pp.pprint(versions)
+for mod in versions:
+    for basefile in versions[mod]:
+        if basefile == 'groups':
+            continue
+        root = '/opt/share/modules/' + versions[mod]['groups']
+        print 'parsing', root, mod, basefile
+
+        data[mod] = parse_base(root, mod, basefile, r)
+            
+exit()
+
+pp.pprint(data)
+
+
+
+
+for i in versions:
+    if len(versions[i])>1:
+        print 'multiple versions of module ', i
 
