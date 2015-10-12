@@ -22,6 +22,9 @@ ignore = [
     "GeneralAppSetup",
     "} else {",
     "module load",
+    'GeneralLibSetup',
+    'GeneralCompilerSetup',
+    'puts stderr',
     ]
 
 
@@ -135,7 +138,6 @@ def parse_base(basefile, mod):
                 continue
 
 
-
             if param[0] in ['prepend-path', 'append-path']:
                 add3list(param, config)
 
@@ -170,10 +172,6 @@ def parse_base(basefile, mod):
     config['default_version'] = get_default(root, grp, mod)
 
 
-    #TODO Fix this
-    config['groups'] = versions[mod][basefile].keys()
-
-
     try:
         with open(root + mod + '/.desc', 'r') as desc:
             desc = desc.read()
@@ -183,6 +181,8 @@ def parse_base(basefile, mod):
 
 
 
+    #Write the group *-extra to module file
+    config['groups'] = basefile.split('/')[4]
 
     #Write the file to disc
     if len(versions[mod]) > 1:
@@ -195,15 +195,14 @@ def parse_base(basefile, mod):
         outfile.write( yaml.dump(config, default_flow_style=False))
             
 
+    if cannot_parse:
+        print filename
+        print '\n'.join(cannot_parse)
+        print '\n'
 
     return config
 
 
-
-#    if cannot_parse:
-#        print filename
-#        print '\n'.join(cannot_parse)
-#        print '\n'
 
 
 
@@ -256,23 +255,36 @@ for r in ['applications', 'compilers', 'libs']:
         get_versions(root, r, m)
 
 #Print the version data
-pp.pprint(versions)
+#pp.pprint(versions)
 
 
 for mod in versions:
     for basefile in versions[mod]:
-
         data[mod] = parse_base(basefile, mod)
-            
-
 #pp.pprint(data)
+
+
+#create the group files
+for r in ['applications', 'compilers', 'libs']:
+    config = {'group': r, 'modules': list()}
+    for m in versions:
+        for b in versions[m]:
+            for v in versions[m][b]:
+                for g in versions[m][b][v]:
+                    if not g.endswith('-extra'):
+                        if g == r:
+                            config['modules'].append(m)
+
+    with open('yaml/' + r + '.yaml', 'w') as outfile:
+        outfile.write( yaml.dump(config, default_flow_style=False))
+
 
 
 
 
 for i in versions:
     if len(versions[i]) > 1:
-        print 'multiple versions of module ', i
+        print 'multiple versions of basefile for module ', i
 
 
 
