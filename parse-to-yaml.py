@@ -77,8 +77,9 @@ def get_default(root, grp, mod):
     module-version netcdf/4.1.3 default
     """
     try:
-        with open(root + grp + '/' + mod + '/.modulerc', 'r') as desc:
-            line = desc.readlines()
+        filename = root + grp + '-extra/' + mod + '/.modulerc'
+        with open(filename, 'r') as modrc:
+            line = modrc.readlines()
     except:
         return ''
 
@@ -173,7 +174,8 @@ def parse_base(basefile, mod):
 
 
     try:
-        with open(root + mod + '/.desc', 'r') as desc:
+        filename = root + grp + '-extra/' + mod + '/.desc'
+        with open(filename, 'r') as desc:
             desc = desc.read()
     except:
         desc = ''
@@ -258,6 +260,7 @@ for r in ['applications', 'compilers', 'libs']:
 #pp.pprint(versions)
 
 
+
 for mod in versions:
     for basefile in versions[mod]:
         data[mod] = parse_base(basefile, mod)
@@ -285,8 +288,6 @@ for r in ['applications', 'compilers', 'libs']:
 for i in versions:
     if len(versions[i]) > 1:
         print 'multiple versions of basefile for module ', i
-
-
 
 
 

@@ -3,6 +3,8 @@
 __author__ = "Niall OByrnes"
 __version__ = "0.0.1"
 
+import logging
+
 
 import os
 import re
@@ -21,7 +23,7 @@ from help_text import help_text
 
 
 #module [cmd]  a list of the allowable commands
-cmds = ['load', 'unload', 'show', 'avail', 'purge', 'list', 'help', 'version']
+cmds = ['load', 'unload', 'show', 'avail', 'purge', 'list', 'help', 'version', 'network']
 
 #Admin command
 acmds = ['report', 'validate']
@@ -45,11 +47,17 @@ mod_keywords = ['version', 'case']
 
 #TODO should be picked up from admin.yaml, or an environment variable or something
 #DIR = '/opt/share/kmodules/'
-#DIR = 'yaml/'
-DIR = 'tests/'
+DIR = 'yaml/'
+#DIR = 'tests/'
 
 
-class Module(object):
+
+LOG_FILENAME = 'logging_example.out'
+logging.basicConfig(filename=LOG_FILENAME,
+                            level=logging.DEBUG,
+                                                )
+
+class BaseModule(object):
 
 
     def __init__(self, cmd='help', mod='', vers=''):
@@ -58,6 +66,7 @@ class Module(object):
         self.mod = mod
         self.req_version = vers
 
+        logging.info('Running %s %s %s', self.cmd, self.mod, self.req_version)
 
         self.call_function() 
 
@@ -104,16 +113,17 @@ class Module(object):
         cmd = cmd.lower().strip()
 
         switch = [i[0] for i in cmds]
-        if cmd in cmds:
-            getattr(self, '_'+cmd)()
 
+
+        if cmd in cmds:
+            pass
         elif cmd in switch:
             cmd = cmds[ switch.index(cmd) ]
-            getattr(self, '_'+cmd)()
 
         else:
             self._error("ERROR: subcommand '%s' not recognised\n" % (cmd))
 
+        getattr(self, '_'+cmd)()
 
     def _help(self):
         """
@@ -155,8 +165,6 @@ class Module(object):
         return config
 
 
-
-
     def _get_version(self):
         """
         If the same yaml file is used for multiple versions, then the version 
@@ -169,6 +177,7 @@ class Module(object):
             takes precedence of version, and is used as the macro $version 
 
         """
+        print 'in get version', self.pp_config()
         if self.req_version:
             if 'versions' in self.config:
                 if self.req_version not in self.config['versions']:
@@ -190,6 +199,7 @@ class Module(object):
             self.config['version'] = self.config['default_version']
 
         else:
+
             if '$version' in self.load_yaml_as_text(self.filename):
                 self._error("Version used in module file, yet, version could not be determined."
                                     "\n Use default_version or load a version.")
@@ -212,7 +222,7 @@ class Module(object):
             v1 = d1.get(k) # returns None if v1 has no value for this key
             if ( isinstance(v1, collections.Mapping) and 
                  isinstance(v2, collections.Mapping) ):
-                upsert(v1, v2)
+                self.upsert(v1, v2)
             else:
                 d1[k] = v2
 
@@ -228,9 +238,9 @@ class Module(object):
         Consider including a preload-version
         """
 
-        self.config = self.load_yaml_file('kmodule.yaml')
+        self.config = self.load_yaml_file('common.yaml')
 
-        #check all files with 'mod' in name
+        #check all files with self.mod in name
         modfiles = [i for i in os.listdir(DIR) if self.mod in i and i.endswith('.yaml')]
 
 
@@ -240,6 +250,7 @@ class Module(object):
         if os.path.isdir(DIR + self.mod):
             modfiles.extend([self.mod+'/'+i for i in os.listdir(DIR+self.mod) if i.endswith('.yaml')])
 
+        print 'modfiles', modfiles
 
         chain = list()
         for f in modfiles:
@@ -248,7 +259,9 @@ class Module(object):
                 if len(chain) > 0:
                     self._error("At least more than one module file for version %s found." % self.req_version)
                     raise Exception
-                chain.append(f)
+            chain.append(f)
+
+        logging.debug("Loading Chain %s", chain)
 
 
         def inherit(chain, filename):
@@ -261,7 +274,8 @@ class Module(object):
                     inherit(chain, i)
 
 
-        inherit(chain, chain[0])
+        if chain:
+            inherit(chain, chain[0])
 
 
         #Reverse the chain
@@ -281,7 +295,7 @@ class Module(object):
 
         self._get_version()
 
-        self.interpolate_macros()
+        #self.interpolate_macros()
 
 
 
@@ -478,6 +492,7 @@ class Module(object):
             self._error("Error: no module")
 
         self.load_config()
+
         evaltxt = ''
 
         export_set = set(['LOADEDMODULES'])
@@ -489,6 +504,7 @@ class Module(object):
                 self._prepend(env, val)
                 export_set.add(env)
 
+        
         for env in self.config.get('append', []):
             for val in self.config['append'][env]:
                 self._append(env, val)
@@ -544,12 +560,19 @@ class Module(object):
 
 
 
+    def _network(self):
 
 
-class KModule(Module):
+        self.config = self.load_config()
+        print self.config
+
+
+
+
+class KModule(BaseModule):
 
     def __init__(self, *args, **kwargs):
-        super(ChildB, self).__init__(*args[1:], **kwargs)
+        super(KModule, self).__init__(*args[1:], **kwargs)
 
         print cmd, mod, vers
         self.pp_config()
@@ -572,13 +595,19 @@ class KModule(Module):
         """
         Prints a formatted version of config
         """
-
         export = self._load()
 
         #prittyprint
         print 'export %s' % (export)
 
 
+
+
+class Module(BaseModule):
+
+    def __init__(self, *args, **kwargs):
+        super(Module, self).__init__(*args, **kwargs)
+        pass
 
 
 
