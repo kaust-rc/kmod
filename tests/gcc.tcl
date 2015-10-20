@@ -1,25 +1,3 @@
-YAML
-
-import yaml
-
-yaml.load(file('yaml.yaml'))
-
-
-
-a: &v 99
-
-b: *v
-
-q: &ab
-  a: 1
-  b: 2
-
-w: *ab
-
-
-
-
-
 set myver [exec gcc --version | head -n1 | awk "{ print \$3 }" ]
 puts stderr "Initial $module_name version: $myver"
 

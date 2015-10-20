@@ -102,7 +102,7 @@ def parse_base(basefile, mod):
 
     with open(basefile) as f:
         if '$app_dir' in f.read():
-            config['app_dir'] = '/opt/share/module/' + mod
+            config['app_dir'] = '/opt/share/module/' + mod + '/$version'
 
 
 
@@ -182,9 +182,16 @@ def parse_base(basefile, mod):
     config['desc'] = desc.strip()
 
 
-
     #Write the group *-extra to module file
-    config['groups'] = basefile.split('/')[4]
+    config['groups'] = [basefile.split('/')[4]]
+
+    #Add new group for defaults
+    if len(config['versions']) > 1:
+        config['version_upsert'] = {config['default_version']: {'groups': config['groups'][0].split('-')[0]}}
+    else:
+        config['groups'].append(config['groups'][0].split('-')[0])
+
+
 
     #Write the file to disc
     if len(versions[mod]) > 1:
