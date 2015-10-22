@@ -1,0 +1,40 @@
+app_dir: /opt/share/wien2k/$version
+WIENROOT: $app_dir
+
+desc: WIEN2k allows one to perform electronic structure calculations of solids using
+  density functional theory (DFT). It is based on the full-potential (linearized)
+  augmented plane-wave ((L)APW) + local orbitals (lo) method, one among the most accurate
+  schemes for band structure calculations.
+
+module: wien2k
+prepend:
+  PATH:
+  - $WIENROOT
+  STRUCTEDIT_PATH:
+  - $WIENROOT/SRC_structeditor/bin
+prereq:
+- ifort/11.1.075
+setenv:
+  SCRATCH: ./
+
+
+default_version: 11.1-ifort-11.1.075
+versions:
+- 11.1-ifort-11.1.075
+- 14.2-ifort-11.1.075
+- 9.2-ifort-11.1.075
+- 14.2-intel-15
+groups: applications-extra
+
+
+
+version_upsert:
+  14.2-intel-15:
+    prereq:
+    - ifort/11.1.075
+    - fftw3/3.3.4-openmpi-1.8.3-sse4.2-dp
+    setenv:
+      SCRATCH: /scratch/$::env(USER)
+
+  11.1-ifort-11.1.075:
+    groups: applications

@@ -33,7 +33,6 @@ versions:
 
 
 version_upsert:
-
   4.6.0_k01:
     groups: applications
     prepend:
@@ -46,11 +45,9 @@ version_upsert:
       - $apps_root/gmp/$gmp_version/$distro/lib
       - $apps_root/mpfr/$mpfr_version/$distro/lib
       - $apps_root/mpc/$mpc_version/$distro/lib
-
   5.1.0:
     prepend:
       PATH:
       - $app_dir/bin:/opt/share/gcc/4.6.0/el6/bin
       CPATH:
       - /usr/include/x86_64-linux-gnu
-

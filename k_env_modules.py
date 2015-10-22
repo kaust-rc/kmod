@@ -23,10 +23,10 @@ from help_text import help_text
 
 
 #module [cmd]  a list of the allowable commands
-cmds = ['load', 'unload', 'show', 'avail', 'purge', 'list', 'help', 'version', 'network']
+cmds = ['load', 'unload', 'show', 'avail', 'purge', 'list', 'help', 'version']
 
 #Admin command
-acmds = ['report', 'validate']
+acmds = ['report', 'validate', 'network']
 
 
 #Keywords reserved for module application
@@ -47,8 +47,8 @@ mod_keywords = ['version', 'case']
 
 #TODO should be picked up from admin.yaml, or an environment variable or something
 #DIR = '/opt/share/kmodules/'
-DIR = 'yaml/'
-#DIR = 'tests/'
+#DIR = 'yaml/'
+DIR = 'tests/'
 
 
 
@@ -109,30 +109,35 @@ class BaseModule(object):
 
         If more comands are added then maybe move to getopt    
         """
+        
         cmd = self.cmd.replace('-', '')
         cmd = cmd.lower().strip()
 
+        """
         switch = [i[0] for i in cmds]
-
 
         if cmd in cmds:
             pass
         elif cmd in switch:
             cmd = cmds[ switch.index(cmd) ]
+        """
+        if cmd == 'print':
+            cmd = '_print'
+        #try:
+        getattr(self, cmd)()
+        #except:
+        #    self._error("ERROR: subcommand '%s' not recognised\n" % (cmd))
 
-        else:
-            self._error("ERROR: subcommand '%s' not recognised\n" % (cmd))
 
-        getattr(self, '_'+cmd)()
 
-    def _help(self):
+    def help(self):
         """
         Prints the help message
         """
         self._echo(help_text())
 
 
-    def _version(self):
+    def version(self):
         """
         Prints the version
         """
@@ -154,11 +159,10 @@ class BaseModule(object):
         """
         Errors should be ignored but logged.
         """
-        try:
-            config =  yaml.load(file(DIR+filename))
-
-        except:
-            self._error("cannot open module file %s" % filename)
+        #try:
+        config =  yaml.load(file(DIR+filename))
+        #except IOError:
+        #    self._error("cannot open module file %s" % filename)
             
 
         #TODO, some error checking, eg if file exists
@@ -177,7 +181,6 @@ class BaseModule(object):
             takes precedence of version, and is used as the macro $version 
 
         """
-        print 'in get version', self.pp_config()
         if self.req_version:
             if 'versions' in self.config:
                 if self.req_version not in self.config['versions']:
@@ -228,7 +231,29 @@ class BaseModule(object):
 
 
 
-    def load_mod_files(self):
+    def load_mod_file(self, mod):
+        """
+        To load just one mod file.  
+        Need another function if there is inheritance
+
+        """
+        self.config = self.load_yaml_file(mod + '.yaml')
+
+
+
+    def search_mod_fles(self):
+
+        #check all files with self.mod in name
+        modfiles = [i for i in os.listdir(DIR) if self.mod in i and i.endswith('.yaml')]
+
+        #And check for all files in a directory mod
+        if os.path.isdir(DIR + self.mod):
+            modfiles.extend([self.mod+'/'+i for i in os.listdir(DIR+self.mod) if i.endswith('.yaml')])
+
+        return mod_files
+
+
+    def upsert_mod_files(self, mod):
         """
         Takes care of searching and loading the module files
         and overwriting the inheritance
@@ -241,16 +266,9 @@ class BaseModule(object):
         self.config = self.load_yaml_file('common.yaml')
 
         #check all files with self.mod in name
-        modfiles = [i for i in os.listdir(DIR) if self.mod in i and i.endswith('.yaml')]
+        modfiles = self.search_mod_files()
 
 
-
-        
-        #And check for all files in a directory mod
-        if os.path.isdir(DIR + self.mod):
-            modfiles.extend([self.mod+'/'+i for i in os.listdir(DIR+self.mod) if i.endswith('.yaml')])
-
-        print 'modfiles', modfiles
 
         chain = list()
         for f in modfiles:
@@ -284,16 +302,18 @@ class BaseModule(object):
 
 
 
-    def load_config(self):
+    def load_config(self, mod):
         """
         Loads the yaml file and interpolates the macro variables
         """
 
-        self.load_mod_files()
+        self.load_mod_file(mod)
 
         self.validate_config()
 
         self._get_version()
+
+        #nested_macros()
 
         #self.interpolate_macros()
 
@@ -336,9 +356,6 @@ class BaseModule(object):
             self.config[i] = str(self.config[i])
 
 
-    def pp_config(self):
-        self.pp = pprint.PrettyPrinter(indent=4)
-        self.pp.pprint(self.config)
 
 
     def _get_macros(self):
@@ -483,6 +500,8 @@ class BaseModule(object):
         os.environ[env] = ':'.join(envval)
 
 
+    def load(self):
+        self._load()
 
     def _load(self):
         """
@@ -491,7 +510,7 @@ class BaseModule(object):
         if not self.mod:
             self._error("Error: no module")
 
-        self.load_config()
+        self.load_config(self.mod)
 
         evaltxt = ''
 
@@ -534,7 +553,8 @@ class BaseModule(object):
 
 
 
-
+    def unload(self):
+        self._unload()
 
     def _unload(self):
         for var in self.config.get('prepend', []):
@@ -560,12 +580,6 @@ class BaseModule(object):
 
 
 
-    def _network(self):
-
-
-        self.config = self.load_config()
-        print self.config
-
 
 
 
@@ -574,11 +588,7 @@ class KModule(BaseModule):
     def __init__(self, *args, **kwargs):
         super(KModule, self).__init__(*args[1:], **kwargs)
 
-        print cmd, mod, vers
-        self.pp_config()
-
-
-        self.validate_config()
+        #self.validate_config()
 
     def validate_config(self):
         for i in self.config.keys():
@@ -601,6 +611,23 @@ class KModule(BaseModule):
         print 'export %s' % (export)
 
 
+    def pp_config(self):
+        self.pp = pprint.PrettyPrinter(indent=4)
+        self.pp.pprint(self.config)
+
+
+    def _print(self):
+        self.load_mod_file(self.mod)
+        self.pp_config()
+
+
+
+    def _network(self):
+
+
+        self.config = self.load_config()
+        print self.config
+
 
 
 class Module(BaseModule):
@@ -614,10 +641,10 @@ class Module(BaseModule):
 if __name__ == '__main__':
 
 
-
+    print sys.argv
 
     if len(sys.argv) > 1 and sys.argv[1] == 'debug':
-        m = KModule(*sys.argv[2:])
+        m = KModule(*sys.argv[1:])
     else:
         m = Module(*sys.argv[1:])
 

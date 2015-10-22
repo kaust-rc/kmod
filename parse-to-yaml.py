@@ -33,6 +33,7 @@ def add2list(param, config):
     conflict a b c
     prereq a
     """
+    param = [i for i in param if not i.endswith('-extra')]
 
     name, val = param[0], param[1:]
     name = MAP[name]
@@ -102,7 +103,7 @@ def parse_base(basefile, mod):
 
     with open(basefile) as f:
         if '$app_dir' in f.read():
-            config['app_dir'] = '/opt/share/module/' + mod + '/$version'
+            config['app_dir'] = '/opt/share/' + mod + '/$version'
 
 
 
