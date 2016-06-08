@@ -15,7 +15,7 @@ Better for admins
  * Uses modern standard for config files: yaml
  * Built in reporting of modules installed, including default applications
  * Automatic reporting of modules used, and by whom
- * Designed to work with git for versioning and transparency
+ * Designed to work with git for versioning and transparency of the yaml config files
  * Better control of version conflicts
 
 Possibly
@@ -39,12 +39,18 @@ executes bash function  "eval $(python k-env-module.py load gcc)"
 which resolves
 export PATH=/opt/share/gcc:/bin:etc:etc
 
+So add this to your ~/.bashrc file
+
+
+KMODULESROOT=/opt/share/modules/yaml
 
 #Execute the output of k-env-modules
 module (){ eval $(python k_env_modules.py $*); }
 
 #Execute in debug for admins
 kmodule (){ echo $(python k_env_modules.py debug $*); }
+
+
 
 
 
@@ -56,6 +62,12 @@ TODO Notes:
  * Make contents of yaml file available to users
 
 
+
+DEVELOPER NOTES
+===============
+Uses nosetests and pylint
+To Install: sudo pip install nose pylint
+to Run: nosetests
 
 
 
