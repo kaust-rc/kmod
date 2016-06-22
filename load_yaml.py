@@ -8,11 +8,27 @@ is present then the original parameters in the yaml file need to be
 overwritten.
 
 
-
 """
+
+
+import os
+import re
 import glob
 import yaml
+import pprint
+import itertools
 from os.path import isfile
+
+# requires Python 2.7 -- see note below if you're using an earlier version
+import collections
+
+
+def _tmp_error(message, admin_message=""):
+    if not admin_message:
+        admin_message = message
+    print 'User Error Message: ', message
+    print 'Admin Error Message: ', admin_message
+    #exit(1)
 
 
 class LoadYaml(object):
@@ -22,45 +38,102 @@ class LoadYaml(object):
         2. Replace $macros
         3. Load text into yaml
     """
-
+    #The prefix to a macro variable in the yaml files
     MACRO = '$'
 
+    #The environment variable that holds a : separated list of locations
+    # to look for yaml files
+    ROOT = 'KMODULEROOT'
 
-    def __init__(self, module, version):
+
+    def __init__(self, module, version=None):
         self.module = module
         self.req_version = version
 
-        self.text = None
-        self.yaml = None
+        self.filenames = list()
+        self.yaml_files = list()
+
+        self.versions = list()
+        self.default_version = None
+
+        #Combined file with inheritance and requeste defaults/version etc
+        self.yaml = dict()
 
 
-    def get_yaml(self):
-        """
-        Loads the appropriate module and version
 
-        returns: dict structure of env params
-        """
-        self.yaml = self.load_yaml_version()
-
-        # These 2 funcs operate on self.text        
-        self._sed_macros()
-        self._insert_req_version()
-
-        self.yaml = yaml.load(self.text)
-
-        return self.yaml
-
-    def get_possible_filenames(self, root='.'):
+    def get_filenames_and_yamls(self):
         """
         Looks for the yaml file at module* and module*/*
 
         returns: list of filenames
+                 list of yaml dicts
         """
+        locs = [i[:-1] if i.endswith('/') else i
+                        for i in os.environ[LoadYaml.ROOT].split(':')]
+        
+        files = list()
+        for loc in locs:
+            files.extend(glob.glob("%s/%s*" % (loc, self.module)))
 
-        #TODO remove directories
-        self.files = glob.glob("%s/%s*" % (root, module))
+            files.extend(glob.glob("%s/%s/*" % (loc, self.module)))
 
-        self.files.extend(glob.glob("%s/%s/*" % (root, module)))
+
+        for f in files:
+            if os.path.isdir(f):
+                continue
+            yaml = self.load_yaml(f)
+            if not yaml:
+                continue
+
+
+            self.filenames.append(f)
+            self.yaml_files.append(yaml)
+
+
+
+    def get_versions(self):
+        """
+        Returns a list of versions
+
+        return: list
+        """
+        self.versions = list()
+        self.default_version = None
+
+        for i, yaml in enumerate(self.yaml_files):
+
+
+            # the $version macro is a special macro
+            if 'version' in yaml:
+                msg = "Invalid use of version in file %s " % self.filenames[i][2:]
+                msg += "'version' should not be defined in the yaml file."
+                _tmp_error("Error, contact helpdesk", msg)
+                
+
+
+            # Creates a file and version parallel list
+            versions = yaml.get('versions')
+
+            if not isinstance(versions, list):
+                self.versions.append([versions])
+            else:
+                self.versions.append(versions)
+
+
+            default_version = yaml.get('default_version')
+
+            if default_version and self.default_version:
+                _tmp_error("", "More than one default version defined")
+
+            elif default_version:
+                self.default_version = default_version
+
+        #TODO to remove the none
+        x = list(itertools.chain.from_iterable( self.versions ))
+        return [i for i in x if i]
+
+
+
 
 
     def determine_version(self):
@@ -68,60 +141,30 @@ class LoadYaml(object):
         Loads the yaml files and determines the correct file given 
         the 1. requested or 2. default or 3. latest version
         """
-        self.get_possible_filenames()
-
-        files = list()
-        versions = list()
-
-        for f in self.files:
-            yaml = self.load_yaml(f)
-            possible_versions = yaml.get('versions', ['invalid'])
-
-            if not isinstance(possible_versions, list):
-                possible_versions = [possible_versions]
-
-            for v in possible_versions:
-                files.append(f)
-                versions.append(v)
+        versions = self.get_versions()
 
         # validate versions
+        if self.req_version:
+
+            if versions.count(self.req_version) == 1:
+                return self.req_version
+
+            elif versions.count(self.req_version) > 1:
+                    print "Multiple versions of requested version '%s' found in files %s" % (self.req_version, ", ".join(files))
+                    return None
+
+            else:
+                print ("Request verison %s not found," % self.req_version,
+                    "or yaml invalid, ie versions parameter does not exist")
+                return None
+
+        elif self.default_version:
+            return self.default_version
 
 
-
-        #If the requested version is in the file then return it            
-        if self.req_version in versions:
-            self.filename = found[0]
-            return self.load_yaml(i)
-
-
-
-
-        if len(found) == 1:
-
-        elif len(found) > 1:
-            print "Multiple versions found in files %s" % ", ".join(files)
-            return list()
-        else:
-            print ("Request verison %s not found," % self.req_version,
-                "or yaml invalid, ie versions parameter does not exist")
-            return list()
-
-
-
-        self.verison = 
-        return self.verison
-
-
-
-
-
-    def load_yaml_version(self):
-        """
-
-        """
-
-
-
+        # Return the latest verison
+        versions.sort()
+        return versions[-1]
 
 
 
@@ -134,82 +177,197 @@ class LoadYaml(object):
         try:
             return yaml.load(file(filename))
         except IOError:
-            print "Cannot open file %s" % filename
-            return list()
+            _tmp_error("", "Cannot open file %s" % filename)
+            return None
         except:
-            print "Probably not a valid yaml file %s" % filename
-            return list()
+            _tmp_error("", "Probably not a valid yaml file %s" % filename)
+            return None
 
 
-    def load_yaml_as_text(self, filename):
+
+
+
+    def build_dependency(self, version=None):
         """
-        Loads the yaml as text
+        Builds a network of versions
         """
-        try:
-            with open(filename) as f:
-                return f.read()
-        except IOError:
-            print "Cannot open file %s" % filename
-            return ""
-        except:
-            print "Cannot open file %s as text" % filename
-            return ""
+        avail_versions = self.get_versions()
 
-    def _sed_macros(self):
+        dep = dict()
+        chain = dict()
+
+        for yml in self.yaml_files:
+            for v in avail_versions:
+                if v in yml and 'inherit' in yml[v]:
+                        #TODO check for multiple inherit keywords?  
+
+                        #a depends on b
+                        a = v
+                        b = yml[v]['inherit']      
+                        dep[a] = b
+
+                        if version:
+                            if v == version:
+                                chain[a] = [b]
+                        else:
+                            chain[a] = [b]
+
+        #print 'deps', dep
+          
+        def regress(chain, c):
+            if chain[c][-1] in dep:
+                chain[c].append(dep[ chain[c][-1] ])
+                regress(chain, c)
+            else:
+                return
+                
+
+        for c in chain:  
+            regress(chain, c)
+
+        #The chain includes the first version
+        for c in chain:
+            chain[c].insert(0, c)
+
+        return chain
+
+
+    def upsert(self, dic1, dic2, debug=None):
+        """
+        Modifies d1 in-place to contain values from d2.  If any value
+        in d1 is a dictionary (or dict-like), *and* the corresponding
+        value in d2 is also a dictionary, then merge them in-place.
+        http://stackoverflow.com/questions/10703858/
+                                python-merge-multi-level-dictionaries
+        Python 2.7 minimum
+        """
+        for key, val2 in dic2.items():
+            val1 = dic1.get(key)  # returns None if v1 has no value for this key
+            if (isinstance(val1, collections.Mapping) and
+                    isinstance(val2, collections.Mapping)):
+                self.upsert(val1, val2)
+            else:
+                #if debug and key in dic1 and key != 'versions':
+                #    print "Upserting key - %s: '%s' with '%s'" % (key, dic1[key], val2)
+                dic1[key] = val2
+
+
+    def combine_yaml(self, version):
+        """
+        Combines many yaml files in order depending on inheritance etc.
+
+        TODO Think about behavior!!!
+        Loads the common data in no order.  This might be dangerous!!
+
+        Then overwrites depending on inherit keywords. This is OK
+
+
+        """
+        avail_versions = self.get_versions()
+        
+        if version not in avail_versions:
+            _tmp_error("Error", "Requested version does not exist")
+
+        versions_yaml = dict()
+
+        #TODO think about this, not much logic here, but maybe thats
+        #the way it should be!
+        for yml in self.yaml_files:
+            x_yml = yml.copy()
+            #removes the versions
+            for v in avail_versions:
+                if v in yml:
+                    versions_yaml[v] = yml[v]
+                    x_yml.pop(v)
+            
+            #TODO upsert not working.  appending a dict rather othan overwriting the contents
+            self.upsert(self.yaml, x_yml, debug=True)
+
+
+        #then upsert the versions, in reverse order [::-1]
+        for i in self.build_dependency(version)[version][::-1]:
+            self.upsert(self.yaml, versions_yaml[i])
+
+        #print self.yaml
+
+
+
+    def _dump_yaml_files_as_text(self):
+        """
+        returns: string
+        """
+        text = ""
+        for yml in self.yaml_files:
+            text += yaml.dump(yml)
+        return text
+
+
+    def _sed_macros(self, version):
         """
         Checks if every param is a macro in the file and replaces it
+
+        TODO Should convert the yaml to text,
+            then sed teh $macro then reload as yaml
+
+
         This feature is intended to replace the tcl macros, and therfore
         most params will be macros. also no in-depth recursion
         is catered for:  ie $$macro probably wont work
         """
-        self.text = self.load_yaml_as_text(self.filename)
+        text = yaml.dump(self.yaml)
 
         for i in self.yaml:
-            # the $version macro is a special macro
-            if i == 'version':
-                print "Invalid use of version in file %s" % self.filename
-                continue
 
             if not isinstance(self.yaml[i], str):
                 continue
             
-            regex = re.compile("\%s%s" % (self.MACRO, i))
-            self.text = regex.sub(self.yaml[i], self.text)
+            regex = re.compile("\%s%s" % (LoadYaml.MACRO, i))
+            text = regex.sub(self.yaml[i], text)
 
 
-        self.yaml = self.text
+        regex = re.compile("\%sversion" % (LoadYaml.MACRO))
+        text = regex.sub(version, text)
 
-    def _insert_req_version(self):
+        self.yaml = yaml.load(text)
+
+
+
+    def load(self):
+        self.get_filenames_and_yamls()
+        self.combine_yaml('5.1.0')
+        self._sed_macros('5.1.0')
+
+
+
+    def pp_yaml_files(self):
         """
-        Inserts the requested version into the $version macro
+        Pretty print the yaml files
         """
-
-        # Needs to handle default
-        if self.req_version:
-            version = self.req_version            
-        elif 'default_version' in self.yaml:
-            version = self.yaml['default_version']
-        elif:
-            #Load the latest verison
-            pass
-
-
-        regex = re.compile("\%sversion" % self.MACRO)
-        self.text = regex.sub(version, self.text)
+        pp = pprint.PrettyPrinter(indent=4)
+        for i, y in enumerate(self.yaml_files):
+            print '\n', self.filenames[i]
+            pp.pprint(y)
 
 
     def pp_yaml(self):
         """
-        Pretty print the yaml, for parsing
+        Pretty print the self.yaml
         """
-        pass
-
-
-
+        pp = pprint.PrettyPrinter(indent=4)
+        pp.pprint(self.yaml)
 
 
 
 
 if __name__=='__main__':
-    m = LoadYaml()
-    m.load_yaml_file('tests/gcc.yaml')
+
+
+    os.environ['KMODULEROOT'] = 'tests/'
+    m = LoadYaml('gcc', '5.1.0')
+    m.load()
+    print m.pp_yaml()
+
+
+
+
+
