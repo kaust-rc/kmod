@@ -8,11 +8,6 @@ from load_yaml import LoadYaml
 
 
 
-class testKMod(unittest.TestCase):
-
-    def setUp(self):
-        pass
-
 
 
 class testLoadYaml(unittest.TestCase):
@@ -24,46 +19,41 @@ class testLoadYaml(unittest.TestCase):
 
 
     def test_get_filenames_and_yamls(self):
-        self.assertListEqual(self.m.filenames,
+        self.assertItemsEqual(self.m.filenames,
             ['./gcc.yaml', './gcc/test.5.0.1.yaml'])
         self.assertEqual(len(self.m.yaml_files), 2)
+
+
+
+
+    def test_simple_validation(self):
+
+        self.m.yaml_files[1]['default_version'] = 'Second_default_version'
+        self.assertRaises(Exception, self.m.simple_validation)
+
+
+        #Note this is version and not versions
+        self.m.yaml_files[0]['version'] = 'error'
+        self.assertRaises(Exception, self.m.simple_validation)
+
+
+
+
 
 
     def test_get_versions(self):
         versions = self.m.get_versions()
 
-        #TODO assertLIst order indifferent
-        self.assertListEqual(versions,
+        self.assertItemsEqual(versions,
             ['4.6.0_k01', '4.8.1', '4.6.0', '5.0.1', '5.1.0'])
 
-
-    def test_get_versions_Error_includes_version_macro(self):
-        #Note this is version and not versions
-        self.m.yaml_files[0]['version'] = 'error'
-        versions = self.m.get_versions()
-
-
-        #TODO assertLIst order indifferent
-        self.assertListEqual(versions, False)
-
-
-
-
-
-    """
-    def test_get_versions_Error_two_default_versions(self):
-
-        self.m.yaml_files[1]['default_version'] = 'Second_default_version'
-       
-        #TODO catch exit here
-        versions = self.m.get_versions()
-
-        self.assertListEqual(versions, None)
-    """
 
 
 
     def test_determine_version(self):
+
+
+
         #Check returns the default defined in yaml, when none requested
         self.assertEqual(self.m.determine_version(),  '4.8.1')
 
@@ -79,23 +69,22 @@ class testLoadYaml(unittest.TestCase):
             if 'default_version' in i:
                 i.pop('default_version')
 
-        #Returns the last in a sorted list
+        #Should returns the last item of a sorted list
         self.assertEqual(self.m.determine_version(),  '5.1.0')
+
+
 
 
     def test_load_yaml(self):
     	yaml = self.m.load_yaml('gcc.yaml')
     	self.assertEqual(yaml['module'], 'gcc')
 
-        #TODO catch IOError
-        #Test file is not yaml
-        self.m.load_yaml('gcc.tcl')
 
-        #test file not exists
-    	self.m.load_yaml('file.not.exist')
+        #tTODO est file not exists
+        #self.assertRaises(Exception, self.m.load_yaml('file.not.exist'))
 
-        self.m.load_yaml('tests/gcc.yaml')
 
+        
 
 
     def test_build_dependency(self):
@@ -172,6 +161,11 @@ class testLoadYaml(unittest.TestCase):
             }
         result = self.m.build_dependency()
         self.assertEqual(expected_result, result)
+
+        #Check with no dependency
+        result = self.m.build_dependency('4.8.0')
+        self.assertEqual(dict(), result)
+
 
         #Test just one version
         expected_result.pop('5.0.1')

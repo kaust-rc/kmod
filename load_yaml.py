@@ -23,12 +23,16 @@ from os.path import isfile
 import collections
 
 
-def _tmp_error(message, admin_message=""):
+def _tmp_error(code, message, admin_message=""):
+    """
+    TODO replace with proper logging later
+    """
     if not admin_message:
         admin_message = message
     print 'User Error Message: ', message
     print 'Admin Error Message: ', admin_message
-    #exit(1)
+    if code == 1:
+        raise Exception
 
 
 class LoadYaml(object):
@@ -90,47 +94,67 @@ class LoadYaml(object):
             self.yaml_files.append(yaml)
 
 
+    def simple_validation(self):
+        """
+        A simple validation to check:
+        1. 'version' is not used in any yaml files (versionS is OK)
+        2. Only one 'default_version' used in any yaml files
+        """
+
+        default_version = None
+
+        for i, yml in enumerate(self.yaml_files):
+
+            # the $version macro is a special macro
+            if 'version' in yml:
+                msg = "Invalid use of version in file %s " % self.filenames[i][2:]
+                msg += "'version' should not be defined in the yaml file."
+                _tmp_error(1, "Error, contact helpdesk", msg)            
+
+
+            if yml.get('default_version'):
+                if default_version:
+                    _tmp_error(1, "Error, contact helpdesk",
+                                "More than one default version defined")
+
+                default_version = yml['default_version']
+
+
+        #TODO determine uniqueness in versions
+
+
 
     def get_versions(self):
         """
+
+        versions is a special keyword that is appended, rather than upserted
+
         Returns a list of versions
+        AND sets the default_version
 
         return: list
         """
         self.versions = list()
         self.default_version = None
 
-        for i, yaml in enumerate(self.yaml_files):
 
-
-            # the $version macro is a special macro
-            if 'version' in yaml:
-                msg = "Invalid use of version in file %s " % self.filenames[i][2:]
-                msg += "'version' should not be defined in the yaml file."
-                _tmp_error("Error, contact helpdesk", msg)
-                
-
+        for yml in self.yaml_files:
 
             # Creates a file and version parallel list
-            versions = yaml.get('versions')
+            if 'versions' in yml:
+                versions = yml['versions']
 
-            if not isinstance(versions, list):
-                self.versions.append([versions])
-            else:
-                self.versions.append(versions)
+                if not isinstance(versions, list):
+                    self.versions.append([versions])
+                else:
+                    self.versions.append(versions)
+
+            #TODO No check here.  Assumes simple_validation has been run
+            if 'default_version' in yml:
+                self.default_version = yml['default_version']
 
 
-            default_version = yaml.get('default_version')
-
-            if default_version and self.default_version:
-                _tmp_error("", "More than one default version defined")
-
-            elif default_version:
-                self.default_version = default_version
-
-        #TODO to remove the none
-        x = list(itertools.chain.from_iterable( self.versions ))
-        return [i for i in x if i]
+        return list(itertools.chain.from_iterable( self.versions ))
 
 
 
@@ -143,20 +167,13 @@ class LoadYaml(object):
         """
         versions = self.get_versions()
 
-        # validate versions
         if self.req_version:
-
-            if versions.count(self.req_version) == 1:
-                return self.req_version
-
-            elif versions.count(self.req_version) > 1:
-                    print "Multiple versions of requested version '%s' found in files %s" % (self.req_version, ", ".join(files))
-                    return None
-
+            if self.req_version not in versions:
+                msg = "Request verison %s not found," % self.req_version
+                msg += "or yaml invalid, ie versions parameter does not exist"
+                _tmp_error(1, msg, msg)
             else:
-                print ("Request verison %s not found," % self.req_version,
-                    "or yaml invalid, ie versions parameter does not exist")
-                return None
+                return self.req_version
 
         elif self.default_version:
             return self.default_version
@@ -168,19 +185,21 @@ class LoadYaml(object):
 
 
 
+
     def load_yaml(self, filename):
         """
         Uses the pyyaml module to load the yaml file
 
         returns: the data dict
-        """
+        """            
+
         try:
             return yaml.load(file(filename))
         except IOError:
-            _tmp_error("", "Cannot open file %s" % filename)
+            _tmp_error(1, "", "Cannot open file %s" % filename)
             return None
         except:
-            _tmp_error("", "Probably not a valid yaml file %s" % filename)
+            _tmp_error(0, "", "Probably not a valid yaml file %s" % filename)
             return None
 
 
@@ -208,14 +227,13 @@ class LoadYaml(object):
 
                         if version:
                             if v == version:
-                                chain[a] = [b]
+                                chain[a] = [a, b]
                         else:
-                            chain[a] = [b]
+                            chain[a] = [a, b]
 
-        #print 'deps', dep
-          
+        
         def regress(chain, c):
-            if chain[c][-1] in dep:
+            if len(chain[c]) > 1 and chain[c][-1] in dep:
                 chain[c].append(dep[ chain[c][-1] ])
                 regress(chain, c)
             else:
@@ -225,9 +243,6 @@ class LoadYaml(object):
         for c in chain:  
             regress(chain, c)
 
-        #The chain includes the first version
-        for c in chain:
-            chain[c].insert(0, c)
 
         return chain
 
@@ -266,7 +281,7 @@ class LoadYaml(object):
         avail_versions = self.get_versions()
         
         if version not in avail_versions:
-            _tmp_error("Error", "Requested version does not exist")
+            _tmp_error(1, "Error", "Requested version does not exist")
 
         versions_yaml = dict()
 
@@ -284,11 +299,15 @@ class LoadYaml(object):
             self.upsert(self.yaml, x_yml, debug=True)
 
 
-        #then upsert the versions, in reverse order [::-1]
-        for i in self.build_dependency(version)[version][::-1]:
-            self.upsert(self.yaml, versions_yaml[i])
+        deps = self.build_dependency(version)
+        if not deps:
+            deps = {version: [version]}
 
-        #print self.yaml
+
+        #then upsert the versions, in reverse order [::-1]
+        for i in deps[version][::-1]:
+            if i in versions_yaml:
+                self.upsert(self.yaml, versions_yaml[i])
 
 
 
@@ -334,8 +353,14 @@ class LoadYaml(object):
 
     def load(self):
         self.get_filenames_and_yamls()
-        self.combine_yaml('5.1.0')
-        self._sed_macros('5.1.0')
+        self.simple_validation()
+
+        version = self.determine_version()
+
+        #TODO check this
+        self.combine_yaml(version)
+
+        self._sed_macros(version)
 
 
 
