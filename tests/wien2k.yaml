@@ -27,12 +27,12 @@ active_versions:
 groups: applications-extra
 
 
-version.14.2-intel-15:
+version=14.2-intel-15:
   prereq:
   - ifort/11.1.075
   - fftw3/3.3.4-openmpi-1.8.3-sse4.2-dp
   setenv:
     SCRATCH: /scratch/$::env(USER)
 
-version.11.1-ifort-11.1.075:
+version=11.1-ifort-11.1.075:
   groups: applications

@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python
 
 import os
@@ -8,22 +7,64 @@ from load_yaml import LoadYaml
 
 
 
+class TestLoadYaml1(unittest.TestCase):
+
+    def setUp(self):
+        self.m = LoadYaml('gcc')
 
 
-class testLoadYaml(unittest.TestCase):
+    def test_get_yaml_locations(self):
+        os.environ[self.m.ROOT] = '/a/s/d/f:b:c/:/s/'
+
+        self.assertItemsEqual(self.m.get_yaml_locations(),
+            ['/a/s/d/f', 'b', 'c', '/s'])
+
+
+    def mock_get_yaml_locations(self):
+        return ['.']
+
+
+    def test_get_filenames_and_yamls(self):
+        self.m.get_yaml_locations = self.mock_get_yaml_locations
+    
+        self.m.get_filenames_and_yamls()
+
+        self.assertItemsEqual(self.m.filenames,
+            ['./gcc.yaml', './gcc/test.5.0.1.yaml'])
+
+        self.assertEqual(len(self.m.yaml_files), 2)
+
+
+    def test_get_all_yamls(self):
+        self.m.get_yaml_locations = self.mock_get_yaml_locations
+
+        self.m.get_all_yamls()
+
+        self.assertItemsEqual(self.m.filenames, 
+            ['./gcc.yaml',
+                './gcc/test.5.0.1.yaml',
+                './vmd.yaml',
+                './wien2k.yaml',
+                './common.yaml'])
+
+
+    def test_get_common_yaml(self):
+        self.m.get_yaml_locations = self.mock_get_yaml_locations
+        common = self.m.get_common_yaml()
+
+        self.assertItemsEqual(common, {'apps_root':'/opt/share'})
+
+
+
+class TestLoadYaml2(unittest.TestCase):
+    """
+    These tests rely on the test/example yaml files in the tests folder
+    """
 
     def setUp(self):
         self.m = LoadYaml('gcc')
         os.environ[self.m.ROOT] = '.'
         self.m.get_filenames_and_yamls()
-
-
-    def test_get_filenames_and_yamls(self):
-        self.assertItemsEqual(self.m.filenames,
-            ['./gcc.yaml', './gcc/test.5.0.1.yaml'])
-        self.assertEqual(len(self.m.yaml_files), 2)
-
-
 
 
     def test_simple_validation(self):
@@ -37,16 +78,11 @@ class testLoadYaml(unittest.TestCase):
         self.assertRaises(Exception, self.m.simple_validation)
 
 
-
-
-
-
-    def test_get_versions(self):
-        versions = self.m.get_versions()
+    def test_get_active_versions(self):
+        versions = self.m.get_active_versions()
 
         self.assertItemsEqual(versions,
             ['4.6.0_k01', '4.8.1', '4.6.0', '5.0.1', '5.1.0'])
-
 
 
 
@@ -71,7 +107,6 @@ class testLoadYaml(unittest.TestCase):
 
         #Should returns the last item of a sorted list
         self.assertEqual(self.m.determine_version(),  '5.1.0')
-
 
 
 
@@ -111,9 +146,9 @@ class testLoadYaml(unittest.TestCase):
 
 
         self.m.yaml_files = [ {i:{'inherit':j}} for i, j in deps]
-        def mock_get_versions():
+        def mock_get_active_versions():
             return return_set(deps)
-        self.m.get_versions = mock_get_versions
+        self.m.get_active_versions = mock_get_active_versions
 
         result = self.m.build_dependency()
         self.assertEqual(expected_result, result)
@@ -145,9 +180,9 @@ class testLoadYaml(unittest.TestCase):
 
 
         self.m.yaml_files = [ {i:{'inherit':j}} for i, j in deps]
-        def mock_get_versions():
+        def mock_get_active_versions():
             return return_set(deps)
-        self.m.get_versions = mock_get_versions
+        self.m.get_active_versions = mock_get_active_versions
 
         result = self.m.build_dependency()
         self.assertEqual(expected_result, result)
@@ -180,22 +215,23 @@ class testLoadYaml(unittest.TestCase):
 
         self.m.combine_yaml('5.1.0')
 
-        self.assertEqual(self.m.yaml['prepend']['PATH'], ['/test/version/$verison'])
+        self.assertEqual(self.m.yaml['prepend']['PATH'], ['$app_dir/bin'])
         self.assertEqual(self.m.yaml['myver'], 'overwriting nonsense')
-        self.assertFalse(self.m.yaml.get('5.1.0'))
+        #self.assertFalse(self.m.yaml.get('5.1.0'))
+
 
     """
-
     def test_combine_yaml_Error_not_exist(self):
         #TODO catch error
         self.m.test_combine_yaml('vers.not.exist')
     """
-        
+
 
     def test_dump_yaml_files_as_text(self):
         self.m.combine_yaml('5.1.0')
         text = self.m._dump_yaml_files_as_text()
-        self.assertTrue(text.startswith("4.6.0_k01:\n  groups: applications\n  prepend:\n"))
+        self.assertTrue("MANPATH: [$app_dir/share/man]" in text)
+        self.assertTrue("default_version: 4.8.1" in text)
 
 
     def test_sed_macros(self):

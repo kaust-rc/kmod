@@ -4,7 +4,7 @@
 
 myver: 'overwriting nonsense'
 
-version.5.1.0:
+version=5.1.0:
   inherit: 5.0.1
   prepend:
     PATH:

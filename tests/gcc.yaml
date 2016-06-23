@@ -33,11 +33,11 @@ prepend:
   - $app_dir/bin
 
 
-version.4.8.1:
+version=4.8.1:
   prepend:
     PATH: /usr/bin/echo nothing
 
-version.4.6.0_k01:
+version=4.6.0_k01:
   groups: applications
   prepend:
     PATH:
@@ -49,7 +49,8 @@ version.4.6.0_k01:
     - $apps_root/gmp/$gmp_version/$distro/lib
     - $apps_root/mpfr/$mpfr_version/$distro/lib
     - $apps_root/mpc/$mpc_version/$distro/lib
-version.5.0.1:
+
+version=5.0.1:
   inherit: 4.8.1
   prepend:
     PATH:
