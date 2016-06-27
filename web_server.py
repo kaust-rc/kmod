@@ -22,45 +22,13 @@ def get_all_files():
     returns: list of filenames
              list of yaml dicts
     """
-    #m = LoadYaml()
-    #m.get_all_files()
-    #return m.filenames, m.yaml_files
-
-    
-    locs = [i[:-1] if i.endswith('/') else i
-            for i in os.environ[LoadYaml.ROOT].split(':')]
-
-    files = list()
-    for loc in locs:
-        files.extend(glob.glob("%s/*.yaml" % loc))
-
-        files.extend(glob.glob("%s/*/*.yaml" % loc))
+    m = LoadYaml()
+    m.get_all_yamls()
 
 
-    filenames = list()
-    yaml_files = list()
+    print m.yaml_files
 
-    for f in files:
-        if os.path.isdir(f):
-            continue
-
-        print f
-        #yml = yaml.load(file(f))
-        try:
-            yml = yaml.load(file(f))
-            filenames.append(f)
-            yaml_files.append(yml)
-
-        except IOError:
-            pass
-        except:
-            pass
-
-    #print filenames
-    #print yaml_files
-
-
-    return filenames, yaml_files
+    return m.filenames, m.yaml_files
 
 
 
@@ -71,7 +39,7 @@ def admin_parse():
     for yml in data:
         mod = yml.get('module', 'Error')
         
-        versions = yml.get('versions', [])
+        versions = yml.get('active_versions', [])
         
         vtext = ""
         for v in versions:
@@ -89,22 +57,21 @@ def admin_parse():
 
 
 def mod_parse(mod, version):
-    try:
-        m = LoadYaml(mod, version)
-        
-        
+
+    m = LoadYaml(mod, version)
+    
+    try:   
         m.load()
 
-
-
-        txt = m.get_dict()
     except:
         txt = {"ERROR": "ERROR"}
-
+    else:
+        txt = m.yaml
+    
 
     text = prettyTable(txt)
 
-    return "<html>"+text+"</html>"
+    return "<html>" + text + "</html>"
 
 
 

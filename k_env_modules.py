@@ -60,6 +60,7 @@ logging.basicConfig(filename=LOG_FILENAME,
 class BaseModule(object):
 
 
+    #TODO should load *args, **kwargs or somthing for multiple module loads
     def __init__(self, cmd='help', mod='', vers=''):
 
         self.cmd = cmd

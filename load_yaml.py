@@ -34,8 +34,8 @@ def _tmp_error(code, message, admin_message=""):
         admin_message = message
     print 'User Error Message: ', message
     print 'Admin Error Message: ', admin_message
-    if code == 1:
-        raise Exception
+    #if code == 1:
+    #    raise Exception
 
 
 class LoadYaml(object):
@@ -57,7 +57,7 @@ class LoadYaml(object):
     COMMON_YAML = "common.yaml"
 
 
-    def __init__(self, module, version=None):
+    def __init__(self, module=None, version=None):
         self.module = module
         self.req_version = version
 
@@ -69,6 +69,8 @@ class LoadYaml(object):
 
         #Combined file with inheritance and requested defaults/version etc
         self.yaml = dict()
+
+        print self.module, self.req_version
 
 
     def get_yaml_locations(self):
@@ -115,6 +117,8 @@ class LoadYaml(object):
 
 
         self._check_and_set_yaml(files)
+
+
 
 
 
@@ -242,8 +246,10 @@ class LoadYaml(object):
             if 'default_version' in yml:
                 self.default_version = yml['default_version']
 
+        self.versions = list(itertools.chain.from_iterable(self.versions))
+
         # This returns a flat list of versions
-        return list(itertools.chain.from_iterable(self.versions))
+        return self.versions
 
 
 
@@ -253,6 +259,7 @@ class LoadYaml(object):
         the 1. requested or 2. default or 3. latest version
         """
         versions = self.get_active_versions()
+
 
         if self.req_version:
             if self.req_version not in versions:
@@ -266,6 +273,7 @@ class LoadYaml(object):
             return self.default_version
 
 
+        print "DEBUG ", versions
         # Return the latest verison
         versions.sort()
         return versions[-1]
@@ -424,16 +432,26 @@ class LoadYaml(object):
         regex = re.compile("\%sversion" % (LoadYaml.MACRO))
         text = regex.sub(version, text)
 
+
+        if LoadYaml.MACRO in text:
+            print "undefined macro left in file"
+            #TODO FIX
+            pass#raise Exception
+
         self.yaml = pyyaml.load(text)
+
 
 
 
     def load(self):
         self.get_filenames_and_yamls()
-        #self.simple_validation()
+        self.simple_validation()
 
         version = self.determine_version()
 
+
+        #TODO CHECK THIS, it needs to set the determined version
+        self.version = version
         #TODO check this
         self.combine_yaml(version)
 
@@ -465,16 +483,34 @@ class LoadYaml(object):
 
 
 
+
+
+
 if __name__ == '__main__':
     import sys
-    #mod = sys.argv[1]
-    #version = sys.argv[2]
 
     os.environ['KMODROOT'] = 'tests/'
-    #m = LoadYaml(mod, version)
-    m = LoadYaml('gcc', '4.8.1')
+
+
+    if len(sys.argv) > 2:
+        mod = sys.argv[1]
+        version = sys.argv[2]
+
+
+    elif len(sys.argv) == 2:
+        mod = sys.argv[1]
+        version = None
+
+    else:
+        mod = 'gcc'
+        version = '4.8.1'
+
+    m = LoadYaml(mod, version)
     m.load()
     print m.pp_yaml()
+    
+
+
 
 
 

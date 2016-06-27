@@ -4,12 +4,13 @@ binutils_ver: '2.21'
 default_version: 4.8.1
 desc: 'GNU compilers suite: gcc, g++, gfortran, etc.'
 gmp_version: 5.0.2
+distro: DISTRO
 groups: compilers-extra
 module: gcc
 mpc_version: '0.9'
 mpfr_version: 3.0.1
 myver: 'exec'
-arg_mask: 'module[-_/ ]$version'
+arg_mask: 'arg_mask'
 active_versions:
 - 4.6.0_k01
 - 4.8.1
