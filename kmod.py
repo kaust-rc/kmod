@@ -304,6 +304,42 @@ class BaseModule(object):
 
 
 
+    def get_terminal_size(self):
+        rows, columns = os.popen('stty size', 'r').read().split()
+
+        return int(rows), int(columns)
+
+
+
+
+    def avail(self):
+        """
+        """
+        m = LoadYaml()
+        print m.get_yaml_locations()
+        m.get_all_yamls()
+
+        rows, columns = self.get_terminal_size()
+        #print yamls
+
+        # TODO width should be max length of a module/version
+        width = 36
+
+        prt = []
+        for y in m.yaml_files:
+            m = y.get('module', {})
+            for v in y.get('active_versions', []):
+                prt.append("%s/%s" % (m, v))
+
+        n = columns/width
+        print
+        for p in [prt[i:i+n] for i in range(0, len(prt), n)]:
+            for i in p:
+                print "%-30s" % i,
+            print
+        print
+
+
 
 
 class KMod(BaseModule):
@@ -369,6 +405,7 @@ class Module(BaseModule):
 
 if __name__ == '__main__':
 
+    os.environ['KMODROOT'] = 'tests/'
 
     m = KMod(sys.argv[1:])
 
