@@ -6,9 +6,11 @@ the usual Macro behavior in in the tcl modules.
 It also needs to consider the of the $version parameter.  If this
 is present then the original parameters in the yaml file need to be
 overwritten.
-
-
 """
+
+
+__author__ = "Niall OByrnes"
+__version__ = "0.0.1"
 
 
 import os
@@ -22,8 +24,6 @@ import collections
 
 import yaml as pyyaml
 
-__author__ = "Niall OByrnes"
-__version__ = "0.0.1"
 
 
 def _tmp_error(code, message, admin_message=""):
@@ -57,12 +57,15 @@ class LoadYaml(object):
     COMMON_YAML = "common.yaml"
 
 
+    GROUPS = "group_list"
+
     def __init__(self, module=None, version=None):
         self.module = module
         self.req_version = version
 
         self.filenames = list()
         self.yaml_files = list()
+        self.groups = dict()
 
         self.versions = list()
         self.default_version = None
@@ -140,6 +143,42 @@ class LoadYaml(object):
 
 
 
+    def set_groups(self):
+        """
+        Allocates the group_lists
+        """
+        # TODO Does not add the versions yet, Should it?
+
+        for yml in self.yaml_files:
+
+            if LoadYaml.GROUPS in yml:
+
+                #Add the active_versions to the groups, TODO this is not correct
+                #NB NB NB NB TODO should separate the version=version from teh active versions
+                for g in yml[LoadYaml.GROUPS]:
+                    if g not in self.groups:
+                        self.groups[g] = list()
+
+                    for v in yml['active_versions']:
+
+                        self.groups[g].append('%s/%s' % (yml['module'], v))
+
+                #TODO fix: look within versions for group_lists
+
+                for possible_version in yml:
+                    if LoadYaml.GROUPS in yml[possible_version]:
+
+                        #Add the active_versions to the groups
+                        for g in yml[possible_version][LoadYaml.GROUPS]:
+                            if g not in self.groups:
+                                self.groups[g] = list()
+
+                                self.groups[g].append('%s/%s' % (possible_version, v))
+
+
+
+
+
     def load_yaml(self, filename):
         """
         Uses the pyyaml module to load the yaml file
@@ -213,7 +252,6 @@ class LoadYaml(object):
 
 
         #TODO determine uniqueness in versions
-
 
 
     def get_active_versions(self):
@@ -489,7 +527,7 @@ class LoadYaml(object):
 if __name__ == '__main__':
     import sys
 
-    os.environ['KMODROOT'] = 'tests/'
+    os.environ['KMODROOT'] = 'test_yaml/'
 
 
     if len(sys.argv) > 2:
@@ -509,13 +547,3 @@ if __name__ == '__main__':
     m.load()
     print m.pp_yaml()
     
-
-
-
-
-
-
-
-
-
-

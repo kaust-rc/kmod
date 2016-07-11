@@ -5,7 +5,7 @@ default_version: 4.8.1
 desc: 'GNU compilers suite: gcc, g++, gfortran, etc.'
 gmp_version: 5.0.2
 distro: DISTRO
-groups: compilers-extra
+group_list: [compilers-extra]
 module: gcc
 mpc_version: '0.9'
 mpfr_version: 3.0.1
@@ -39,7 +39,8 @@ version=4.8.1:
     PATH: /usr/bin/echo nothing
 
 version=4.6.0_k01:
-  groups: applications
+  group_list:
+   - applications
   prepend:
     PATH:
     - $app_dir/bin

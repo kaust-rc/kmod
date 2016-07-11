@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+__author__ = "Niall OByrnes"
+__version__ = "0.0.1"
+
 
 import os
 import glob
@@ -7,9 +10,7 @@ import cherrypy
 
 from load_yaml import LoadYaml
 
-import yaml
-
-
+import yaml as pyyaml
 
 
 

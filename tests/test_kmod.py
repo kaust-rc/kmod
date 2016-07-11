@@ -4,7 +4,7 @@
 import os
 import unittest
 
-from k_env_modules import BaseModule
+from kmod import BaseModule
 from load_yaml import LoadYaml
 
 
@@ -13,7 +13,7 @@ from load_yaml import LoadYaml
 class testKMod(unittest.TestCase):
 
     def setUp(self):
-        os.environ[LoadYaml.ROOT] = '.'
+        os.environ[LoadYaml.ROOT] = '../test_yaml'
         self.m = BaseModule()
         
 

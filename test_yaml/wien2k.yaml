@@ -24,7 +24,7 @@ active_versions:
 - 14.2-ifort-11.1.075
 - 9.2-ifort-11.1.075
 - 14.2-intel-15
-groups: applications-extra
+group_list: [applications-extra]
 
 
 version=14.2-intel-15:
@@ -35,4 +35,4 @@ version=14.2-intel-15:
     SCRATCH: /scratch/$::env(USER)
 
 version=11.1-ifort-11.1.075:
-  groups: applications
+  group_list: [applications]

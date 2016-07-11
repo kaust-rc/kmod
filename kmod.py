@@ -48,7 +48,7 @@ mod_keywords = ['version']
 #TODO should be picked up from admin.yaml, or an environment variable or something
 #DIR = '/opt/share/kmodules/'
 #DIR = 'yaml/'
-DIR = 'tests/'
+DIR = 'test_yaml/'
 
 
 
@@ -314,33 +314,49 @@ class BaseModule(object):
 
     def avail(self):
         """
+        Should print the modules vertically, this does it horizontally, boooo
         """
         m = LoadYaml()
-        print m.get_yaml_locations()
+
+
+        print 'DEBUG', m.get_yaml_locations()
+
+
         m.get_all_yamls()
+
+        m.set_groups()
+
 
         rows, columns = self.get_terminal_size()
         #print yamls
 
-        # TODO width should be max length of a module/version
-        width = 36
 
-        prt = []
-        for y in m.yaml_files:
-            m = y.get('module', {})
-            for v in y.get('active_versions', []):
-                prt.append("%s/%s" % (m, v))
+        width = 0
+        for group in m.groups:
+            for v in m.groups[group]:
+                if len(v) > width:
+                    width = len(v)
 
-        n = columns/width
-        print
-        for p in [prt[i:i+n] for i in range(0, len(prt), n)]:
-            for i in p:
-                print "%-30s" % i,
+        #Add 4 spaces to the maximum length of the text
+        ncols = columns/(width + 4)
+
+
+
+        for group in m.groups:
+            X = (columns - len(group) - 4) / 2
+            print "%s  %s  %s" % ('-'*X, group, '-'*X)
+
+            # Subdivide the list of versions into ncols size lists
+            for i in range(0, len(m.groups[group]), ncols):
+
+                for p in m.groups[group][i:i+ncols]:
+                    print "%-30s" % p,
+                print
             print
-        print
 
 
-
+       
+                
 
 class KMod(BaseModule):
 
@@ -351,10 +367,12 @@ class KMod(BaseModule):
         #self.validate_config()
 
     def validate_config(self):
+
         for i in yaml.keys():
             if '$' in i:
                 print i*5
                 raise Exception
+
         for i in forbidden:
             if i in yaml:
                 print i*5
@@ -405,7 +423,7 @@ class Module(BaseModule):
 
 if __name__ == '__main__':
 
-    os.environ['KMODROOT'] = 'tests/'
+    os.environ['KMODROOT'] = 'test_yaml/'
 
     m = KMod(sys.argv[1:])
 

@@ -21,7 +21,7 @@ class TestLoadYaml1(unittest.TestCase):
 
 
     def mock_get_yaml_locations(self):
-        return ['.']
+        return ['../test_yaml']
 
 
     def test_get_filenames_and_yamls(self):
@@ -30,7 +30,7 @@ class TestLoadYaml1(unittest.TestCase):
         self.m.get_filenames_and_yamls()
 
         self.assertItemsEqual(self.m.filenames,
-            ['./gcc.yaml', './gcc/test.5.0.1.yaml'])
+            ['../test_yaml/gcc.yaml', '../test_yaml/gcc/test.5.0.1.yaml'])
 
         self.assertEqual(len(self.m.yaml_files), 2)
 
@@ -41,11 +41,11 @@ class TestLoadYaml1(unittest.TestCase):
         self.m.get_all_yamls()
 
         self.assertItemsEqual(self.m.filenames, 
-            ['./gcc.yaml',
-                './gcc/test.5.0.1.yaml',
-                './vmd.yaml',
-                './wien2k.yaml',
-                './common.yaml'])
+            ['../test_yaml/gcc.yaml',
+                '../test_yaml/gcc/test.5.0.1.yaml',
+                '../test_yaml/vmd.yaml',
+                '../test_yaml/wien2k.yaml',
+                '../test_yaml/common.yaml'])
 
 
     def test_get_common_yaml(self):
@@ -63,7 +63,7 @@ class TestLoadYaml2(unittest.TestCase):
 
     def setUp(self):
         self.m = LoadYaml('gcc')
-        os.environ[self.m.ROOT] = '.'
+        os.environ[self.m.ROOT] = '../test_yaml'
         self.m.get_filenames_and_yamls()
 
 
