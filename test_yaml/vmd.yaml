@@ -3,7 +3,6 @@ app_dir: /opt/share/vmd/$version
 append:
   LD_LIBRARY_PATH:
   - $app_dir/KAUST/lib
-default_version: 1.9.1
 desc: VMD provides user-editable "materials" which can be applied to molecular geometry.
   These material properties control the details of how VMD shades the molecular geometry,
   and how transparent or opaque the displayed molecular geometry is. With this feature,
@@ -11,7 +10,7 @@ desc: VMD provides user-editable "materials" which can be applied to molecular g
   details to be seen within a large molecular structure. The material controls can
   be particularly helpful when rendering molecular scenes using external ray tracers,
   each of which typically differ slightly.
-groups:
+group_list:
 - applications-extra
 - applications
 module: vmd
@@ -29,5 +28,5 @@ prereq:
 setenv:
   PLUGINDIR: ${VMDDIR}/plugins
   VMDDIR: /opt/share/vmd/v1.9.1.app/bin
-versions:
+active_versions:
 - 1.9.1

@@ -19,22 +19,20 @@ setenv:
 
 
 default_version: 11.1-ifort-11.1.075
-versions:
+active_versions:
 - 11.1-ifort-11.1.075
 - 14.2-ifort-11.1.075
 - 9.2-ifort-11.1.075
 - 14.2-intel-15
-groups: applications-extra
+group_list: [applications-extra]
 
 
+version=14.2-intel-15:
+  prereq:
+  - ifort/11.1.075
+  - fftw3/3.3.4-openmpi-1.8.3-sse4.2-dp
+  setenv:
+    SCRATCH: /scratch/$::env(USER)
 
-version_upsert:
-  14.2-intel-15:
-    prereq:
-    - ifort/11.1.075
-    - fftw3/3.3.4-openmpi-1.8.3-sse4.2-dp
-    setenv:
-      SCRATCH: /scratch/$::env(USER)
-
-  11.1-ifort-11.1.075:
-    groups: applications
+version=11.1-ifort-11.1.075:
+  group_list: [applications]

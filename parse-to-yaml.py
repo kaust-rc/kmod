@@ -170,7 +170,7 @@ def parse_base(basefile, mod):
 
 
     config['module'] = mod
-    config['versions'] = versions[mod][basefile].keys()
+    config['active_versions'] = versions[mod][basefile].keys()
     config['default_version'] = get_default(root, grp, mod)
 
 
@@ -187,8 +187,8 @@ def parse_base(basefile, mod):
     config['groups'] = [basefile.split('/')[4]]
 
     #Add new group for defaults
-    if len(config['versions']) > 1:
-        config['version_upsert'] = {config['default_version']: {'groups': config['groups'][0].split('-')[0]}}
+    if len(config['active_versions']) > 1:
+        config['version_upsert'] = {'version=' + config['default_version']: {'groups': config['groups'][0].split('-')[0]}}
     else:
         config['groups'].append(config['groups'][0].split('-')[0])
 

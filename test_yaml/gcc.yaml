@@ -1,0 +1,61 @@
+app_dir: /opt/share/gcc/$version/el6
+arch: x86_64-unknown-linux-gnu
+binutils_ver: '2.21'
+default_version: 4.8.1
+desc: 'GNU compilers suite: gcc, g++, gfortran, etc.'
+gmp_version: 5.0.2
+distro: DISTRO
+group_list: [compilers-extra]
+module: gcc
+mpc_version: '0.9'
+mpfr_version: 3.0.1
+myver: 'exec'
+arg_mask: 'arg_mask'
+active_versions:
+- 4.6.0_k01
+- 4.8.1
+- 4.6.0
+- 5.0.1
+- 5.1.0
+prepend:
+  INFOPATH:
+  - $app_dir/share/info
+  LD_LIBRARY_PATH:
+  - $app_dir/lib/$module/$arch/$version/32
+  - $app_dir/lib/$module/$arch/$version
+  - $app_dir/lib
+  - $app_dir/lib64
+  LIBRARY_PATH:
+  - $app_dir/lib/$module/$arch/lib
+  - $app_dir/lib/$module/$arch/lib64
+  MANPATH:
+  - $app_dir/share/man
+  PATH:
+  - $app_dir/bin
+
+
+version=4.8.1:
+  prepend:
+    PATH: /usr/bin/echo nothing
+
+version=4.6.0_k01:
+  group_list:
+   - applications
+  prepend:
+    PATH:
+    - $app_dir/bin
+    - $apps_root/binutils/$binutils_ver/$distro/bin
+    INFOPATH:
+    - $apps_root/binutils/$binutils_ver/$distro/share/info
+    LD_LIBRARY_PATH:
+    - $apps_root/gmp/$gmp_version/$distro/lib
+    - $apps_root/mpfr/$mpfr_version/$distro/lib
+    - $apps_root/mpc/$mpc_version/$distro/lib
+
+version=5.0.1:
+  inherit: 4.8.1
+  prepend:
+    PATH:
+    - $app_dir/bin:/opt/share/gcc/4.6.0/el6/bin
+    CPATH:
+    - /usr/include/x86_64-linux-gnu
