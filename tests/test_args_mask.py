@@ -1,92 +1,63 @@
 import unittest
 
+import re
 
 class Kmod(object):
 
-
-    def __init__(self, args_mask):
+    @classmethod
+    def parse_args(cls, args_mask, args):
         """
-        This mask will determine from the module load command, how to assign
-        variables to each segment
-
         args_mask will be defined in the yaml file
         example args_mask: /$app/$app_version/
         """
-        self.args_mask = args_mask
+        m = re.match(args_mask, args)
+
+        found = m.groupdict()
+
+
+        return found
 
 
 
-    def parse_args(args=""):
-        """
-        Method to take in a string and return a
-        dict with k:v of pairs of arguments
-        """
-        return dict()
-
-
-
-
-#put this in separate file.
-
-
-#Use nosetests to automate calling
-
-#Make sure pylint is above 8.0 for both test code and dev code
-
-#Good luck
-
-class TestKmod(unittest.XXXXXXXX):
+class TestKmod(unittest.TestCase):
 
     def setUp(self):
-        pass
+        self.default_mask = "(?P<module>.*)[\ \/](?P<version>.*)"
 
 
     def test_parse_args(self):
 
-        m1 = "/$app/$app_version/"
-        self.k = Kmod(m1)
+        test_data = ["vasp/5.3.5",
+                     "vasp/5.3.5/",
+                     "vasp 5.3.5",
+                     "vasp 5.3.5/"]
 
+        result = {'module': 'vasp',
+                  'version': '5.3.5',
+                 }
 
-        t1 = "module load vasp/5.3.5/"
-
-        result = self.k.parse_args(t1)
-
-        self.assertItemsEqual(result, {'$app': 'vasp',
-                                    '$version': '5.3.5',
-                                    }
-
-
-    def test_parse_args_t1_short_input(self):
+        for t in test_data:
+            self.assertItemsEqual(Kmod.parse_args(self.default_mask, t), result)
 
 
 
-        m1 = "/$app/$app_version/$mpi-$mpi_version-$mpi_compiler-$mpi_compiler_version"
-
-
-
-        self.k = Kmod(m1)
-
-        t1 = "module load vasp"
-
-        result = self.k.parse_args(t1)
-
-        self.assertItemsEqual(result, {'$app': 'vasp'}
-
+    """
 
 
 
     def test_parse_args_t1_short_input(self):
-        t1 = "module load vasp/5.3.5/mpich-1.8.6-intel-2015"
+
+        t1 = "vasp/5.3.5/mpich-1.8.6-intel-2015"
 
         result = self.k.parse_args(m1)
 
-        self.assertItemsEqual(result, {'$app': 'vasp',
-                                    '$version': '5.3.5',
-                                    '$mpi': 'mpich',
-                                    '$mpi_version': '1.8.6',
-                                    '$mpicompiler': 'intel'
-                                    '$mpi_compiler_version': '2015'}
-
+        self.assertItemsEqual(result, {'module': 'vasp',
+                                    'version': '5.3.5',
+                                    'mpi': 'mpich',
+                                    'mpi_version': '1.8.6',
+                                    'mpicompiler': 'intel'
+                                    'mpi_compiler_version': '2015'}
+    """
 
 
 
