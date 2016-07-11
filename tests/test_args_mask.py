@@ -1,27 +1,16 @@
+import re
 import unittest
 
-import re
-
-class Kmod(object):
-
-    @classmethod
-    def parse_args(cls, args_mask, args):
-        """
-        args_mask will be defined in the yaml file
-        example args_mask: /$app/$app_version/
-        """
-        m = re.match(args_mask, args)
-
-        found = m.groupdict()
-
-
-        return found
+from load_yaml import LoadYaml
 
 
 
-class TestKmod(unittest.TestCase):
+class TestArgsMask(unittest.TestCase):
 
     def setUp(self):
+
+        self.T = LoadYaml()
+
         self.default_mask = "(?P<module>.*)[\ \/](?P<version>.*)"
 
 
@@ -37,7 +26,7 @@ class TestKmod(unittest.TestCase):
                  }
 
         for t in test_data:
-            self.assertItemsEqual(Kmod.parse_args(self.default_mask, t), result)
+            self.assertItemsEqual(self.T.parse_args(self.default_mask, t), result)
 
 
 

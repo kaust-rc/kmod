@@ -317,7 +317,19 @@ class LoadYaml(object):
         return versions[-1]
 
 
+    def parse_args(self, args_mask, args):
+        """
+        args_mask will be defined in the yaml file
+        example args_mask: /$app/$app_version/
+        """
+        #TODO Possible add self.mask = re.compile(args_mask)
 
+        m = re.match(args_mask, args)
+
+        found = m.groupdict()
+
+        # Do some validation
+        return found
 
 
 
