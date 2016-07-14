@@ -1,2 +1,7 @@
 apps_root: /opt/share
 
+#TODO need to make version, compiler, mpi optional
+args_mask: (?P<module>.*)[\ \/](?P<version>.*)
+#args_mask: (?P<module>.*)[\ \/](?P<version>.*)[\ \/](?P<compiler>.*)[\ \/](?P<mpi>.*)
+
+

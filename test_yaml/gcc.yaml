@@ -10,7 +10,7 @@ module: gcc
 mpc_version: '0.9'
 mpfr_version: 3.0.1
 myver: 'exec'
-arg_mask: 'arg_mask'
+args_mask: 'OVERWRITE args_mask'
 active_versions:
 - 4.6.0_k01
 - 4.8.1
@@ -36,7 +36,7 @@ prepend:
 
 version=4.8.1:
   prepend:
-    PATH: /usr/bin/echo nothing
+    PATH: [/usr/bin/]
 
 version=4.6.0_k01:
   group_list:

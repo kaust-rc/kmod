@@ -56,12 +56,28 @@ class LoadYaml(object):
     # apply to all modules, such as a $root_app_dir etc..
     COMMON_YAML = "common.yaml"
 
-
+    #group_list is mandatory and should be a list, otherwise errors.
     GROUPS = "group_list"
 
-    def __init__(self, module=None, version=None):
-        self.module = module
-        self.req_version = version
+
+    def __init__(self, args):
+
+        #Combined file with inheritance and requested defaults/version etc
+        #Load COMMON_YAML to get args_mask
+        self.yaml = self.get_common_yaml()
+
+        if not self.yaml.get('args_mask'):
+            raise Exception
+
+        args_dict = self.parse_args(self.yaml['args_mask'], args)
+
+        self.module = args_dict.get('module')
+
+        self.req_version = args_dict.get('version')
+
+        self.yaml.update(args_dict)
+
+
 
         self.filenames = list()
         self.yaml_files = list()
@@ -69,11 +85,10 @@ class LoadYaml(object):
 
         self.versions = list()
         self.default_version = None
-
-        #Combined file with inheritance and requested defaults/version etc
-        self.yaml = dict()
-
+        
+        #TODO add to DEBUG
         print self.module, self.req_version
+        print self.yaml
 
 
     def get_yaml_locations(self):
@@ -159,6 +174,7 @@ class LoadYaml(object):
                     if g not in self.groups:
                         self.groups[g] = list()
 
+                    #active_versions is mandatory
                     for v in yml['active_versions']:
 
                         self.groups[g].append('%s/%s' % (yml['module'], v))
@@ -224,14 +240,12 @@ class LoadYaml(object):
         return self.load_yaml(common[0])
 
 
-
     def simple_validation(self):
         """
         A simple validation to check:
         1. 'version' is not used in any yaml files
         2. Only one 'default_version' used in any yaml files
         """
-
         default_version = None
 
         for i, yml in enumerate(self.yaml_files):
@@ -320,7 +334,8 @@ class LoadYaml(object):
     def parse_args(self, args_mask, args):
         """
         args_mask will be defined in the yaml file
-        example args_mask: /$app/$app_version/
+        example args_mask: /module/version/
+
         """
         #TODO Possible add self.mask = re.compile(args_mask)
 
@@ -328,9 +343,10 @@ class LoadYaml(object):
 
         found = m.groupdict()
 
+
+
         # Do some validation
         return found
-
 
 
     def build_dependency(self, version=None):
@@ -444,6 +460,11 @@ class LoadYaml(object):
             if i in versions_yaml:
                 self.upsert(self.yaml, versions_yaml[i])
 
+        #TODO SHOULD REMOVE THE VERSION= Stuff then
+        #TODO SHOULD REMOVE THE VERSION= Stuff then
+                #TODO SHOULD REMOVE THE VERSION= Stuff then
+                        #TODO SHOULD REMOVE THE VERSION= Stuff then
+                                #TODO SHOULD REMOVE THE VERSION= Stuff then
 
 
     def _dump_yaml_files_as_text(self):
@@ -497,15 +518,19 @@ class LoadYaml(object):
         self.get_filenames_and_yamls()
         self.simple_validation()
 
-        version = self.determine_version()
-
-
         #TODO CHECK THIS, it needs to set the determined version
+        version = self.determine_version()
         self.version = version
+        
+        m.pp_yaml()
+
+
         #TODO check this
         self.combine_yaml(version)
+        m.pp_yaml()
 
         self._sed_macros(version)
+        m.pp_yaml()
 
 
     def pp_yaml_files(self):
@@ -524,6 +549,7 @@ class LoadYaml(object):
         """
         pp = pprint.PrettyPrinter(indent=4)
         pp.pprint(self.yaml)
+        print '\n'*3
         
 
     def get_resolved_yaml(self):
@@ -543,19 +569,23 @@ if __name__ == '__main__':
 
 
     if len(sys.argv) > 2:
-        mod = sys.argv[1]
-        version = sys.argv[2]
-
-
-    elif len(sys.argv) == 2:
-        mod = sys.argv[1]
-        version = None
-
+        args = ' '.join(sys.argv[1:])
     else:
-        mod = 'gcc'
-        version = '4.8.1'
+        args = 'gcc 4.8.1'
 
-    m = LoadYaml(mod, version)
-    m.load()
-    print m.pp_yaml()
+
+    print "Debug executing module load %s" % args
+    m = LoadYaml(args)
+
     
+    m.get_filenames_and_yamls()
+    m.simple_validation()
+
+    version = m.determine_version()
+    print "Loading version", version
+
+    m.combine_yaml(version)
+    m.pp_yaml()
+
+    m._sed_macros(version)
+    m.pp_yaml()
