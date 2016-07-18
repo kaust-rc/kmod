@@ -26,9 +26,6 @@ def get_all_files():
     m = LoadYaml()
     m.get_all_yamls()
 
-
-    print m.yaml_files
-
     return m.filenames, m.yaml_files
 
 
@@ -57,9 +54,9 @@ def admin_parse():
 
 
 
-def mod_parse(mod, version):
+def mod_parse(mod_version):
 
-    m = LoadYaml(mod, version)
+    m = LoadYaml(mod_version)
     
     try:   
         m.load()
@@ -141,7 +138,7 @@ class KModuleReport(object):
 
     @cherrypy.expose
     def module(self, mod, version=None):
-        return mod_parse(mod, version)
+        return mod_parse(mod + '/' + version)
 
 
     @cherrypy.expose
@@ -150,6 +147,7 @@ class KModuleReport(object):
 
 
 if __name__ == '__main__':
+    os.environ['KMODROOT'] = 'test_yaml/'
     #get_all_files()
     #print desc()
     cherrypy.quickstart(KModuleReport())

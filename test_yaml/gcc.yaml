@@ -33,6 +33,11 @@ prepend:
   PATH:
   - $app_dir/bin
 
+inherit: [intel/2015]
+
+uname(hardware)=x86_64:
+  prepend:
+    PATH: [/uname/hardware/x86_64]
 
 version=4.8.1:
   prepend:
@@ -40,7 +45,7 @@ version=4.8.1:
 
 version=4.6.0_k01:
   group_list:
-   - applications
+   - applications-new
   prepend:
     PATH:
     - $app_dir/bin
@@ -52,10 +57,16 @@ version=4.6.0_k01:
     - $apps_root/mpfr/$mpfr_version/$distro/lib
     - $apps_root/mpc/$mpc_version/$distro/lib
 
+version=a.b.c:
+  inherit: intel/2015
+
 version=5.0.1:
-  inherit: 4.8.1
+  inherit: version=4.8.1
   prepend:
     PATH:
     - $app_dir/bin:/opt/share/gcc/4.6.0/el6/bin
     CPATH:
     - /usr/include/x86_64-linux-gnu
+
+
+

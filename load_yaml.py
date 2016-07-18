@@ -60,7 +60,7 @@ class LoadYaml(object):
     GROUPS = "group_list"
 
 
-    def __init__(self, args):
+    def __init__(self, args=""):
 
         #Combined file with inheritance and requested defaults/version etc
         #Load COMMON_YAML to get args_mask
@@ -69,14 +69,13 @@ class LoadYaml(object):
         if not self.yaml.get('args_mask'):
             raise Exception
 
-        args_dict = self.parse_args(self.yaml['args_mask'], args)
+        args_dict = self.parse_args(self.yaml.get('args_mask', ""), args)
 
         self.module = args_dict.get('module')
 
         self.req_version = args_dict.get('version')
 
         self.yaml.update(args_dict)
-
 
 
         self.filenames = list()
@@ -86,6 +85,10 @@ class LoadYaml(object):
         self.versions = list()
         self.default_version = None
         
+        #External inheritance.
+        #Will contain and ordered list of external dependencies
+        self.external_dependencies = list()
+
         #TODO add to DEBUG
         print self.module, self.req_version
         print self.yaml
@@ -143,7 +146,7 @@ class LoadYaml(object):
     def _check_and_set_yaml(self, files):
         """
         Scans the list of directories and sets the filenames and yamls
-        It ignores files it cannot convert load from yaml to python dictionary
+        It ignores files it cannot load or convert from yaml to python dict
         """
         for f in files:
             if os.path.isdir(f):
@@ -168,8 +171,8 @@ class LoadYaml(object):
 
             if LoadYaml.GROUPS in yml:
 
-                #Add the active_versions to the groups, TODO this is not correct
-                #NB NB NB NB TODO should separate the version=version from teh active versions
+                #Add active_versions to the groups, TODO this is not correct
+                #TODO separate the version=version from teh active versions
                 for g in yml[LoadYaml.GROUPS]:
                     if g not in self.groups:
                         self.groups[g] = list()
@@ -213,10 +216,6 @@ class LoadYaml(object):
 
         if not tmp:
             return tmp
-
-        for i in tmp:
-            if i.startswith('version='):
-                tmp[i[8:]] = tmp.pop(i)
 
         return tmp
 
@@ -341,9 +340,10 @@ class LoadYaml(object):
 
         m = re.match(args_mask, args)
 
-        found = m.groupdict()
-
-
+        if m:
+            found = m.groupdict()
+        else:
+            found = dict()
 
         # Do some validation
         return found
@@ -393,7 +393,7 @@ class LoadYaml(object):
         return chain
 
 
-    def upsert(self, dic1, dic2, debug=None):
+    def upsert(self, dic1, dic2, debug=False):
         """
         Modifies d1 in-place to contain values from d2.  If any value
         in d1 is a dictionary (or dict-like), *and* the corresponding
@@ -408,20 +408,19 @@ class LoadYaml(object):
                     isinstance(val2, collections.Mapping)):
                 self.upsert(val1, val2)
             else:
-                #TODO if debug and key in dic1 and key != 'versions':
-                #    print "Upserting key - %s: '%s' with
-                #'%s'" % (key, dic1[key], val2)
+                if debug and key in dic1:
+                    print "Upserting key - %s: '%s' with '%s'" % (key, dic1[key], val2)
                 dic1[key] = val2
 
 
     def combine_yaml(self, version):
         """
-        Combines many yaml files in order depending on inheritance etc.
+        Combines many yaml files into one yaml file.
+        This upserts without any order, so any "top-level"
+            parameters will be overwritten.
 
-        TODO Think about behavior!!!
-        Loads the common data in no order.  This might be dangerous!!
-
-        Then overwrites depending on inherit keywords. This is OK
+        This should report a debug message to the admin in case there is any
+            unintended overwriting of top level parameters.
         """
         active_versions = self.get_active_versions()
 
@@ -434,37 +433,41 @@ class LoadYaml(object):
 
         self.yaml = self.get_common_yaml()
 
-        #TODO think about this, not much logic here, but maybe thats
-        #the way it should be!
+        #TODO This will overwrite any top-level parameters, in no particular
+        #order.  TODO Need to think about this
         for yml in self.yaml_files:
-            x_yml = yml.copy()
-            #removes the versions
-            for v in active_versions:
-                
-                if "version=%s" % v in yml:
-                #if v in yml:
-                    versions_yaml[v] = yml[v]
-                    x_yml.pop(v)
+            self.upsert(self.yaml, yml, debug=True)
 
 
-            self.upsert(self.yaml, x_yml, debug=True)
+    def version(self):
+        return self.version
 
 
-        deps = self.build_dependency(version)
-        if not deps:
-            deps = {version: [version]}
+    def list_insert_0(self, l, i):
+        if isinstance(i, str):
+            l.insert(0, i)
+
+        elif isinstance(i, list):
+            l = dep.extend(i)        
 
 
-        #then upsert the versions, in reverse order [::-1]
-        for i in deps[version][::-1]:
-            if i in versions_yaml:
-                self.upsert(self.yaml, versions_yaml[i])
 
-        #TODO SHOULD REMOVE THE VERSION= Stuff then
-        #TODO SHOULD REMOVE THE VERSION= Stuff then
-                #TODO SHOULD REMOVE THE VERSION= Stuff then
-                        #TODO SHOULD REMOVE THE VERSION= Stuff then
-                                #TODO SHOULD REMOVE THE VERSION= Stuff then
+    def _conditionals(self):
+        """
+        This method, scans and case keys (with a '=') and applies the 
+        case.
+        """
+        cases = [c for c in self.yaml if '=' in c]
+        for c in cases:
+            k, v = c.split('=')
+
+            if getattr(self, k, None) == v:
+                print "Loading data for %s = %s" % (k, v)
+
+                self.upsert(self.yaml, self.yaml[c])
+        
+            if c.startswith('version='):
+                del self.yaml[c]
 
 
     def _dump_yaml_files_as_text(self):
@@ -513,24 +516,45 @@ class LoadYaml(object):
 
 
 
+    def uname_hardware():
+        """
+        TODO SHould this be in kmod????
+        """
+        print "This should be called in kmod, not LoadYaml"
+        raise Exception()
+
 
     def load(self):
+        """
+        The main callable method.
+        1. Loads the common yaml, and intreprets the args_mask to
+               determine module and version
+        2. Searches for all relevant yaml files module* and module/*
+        3. Loads all relevant yaml files, for the module
+        4. If a version is not requested, it is determined by a
+               marked default, or the 'highest' version
+        5a. Finds the relevant version in either a file or a 'version=x.x.x'
+
+        5b. If there is inheritance in this yaml data, then organises a
+                chain of relevant verison to preload
+        5c. Upserts the version specific yaml in order of the inheritance chain
+        6. Replaces all macro parameters
+        """
+
         self.get_filenames_and_yamls()
         self.simple_validation()
 
         #TODO CHECK THIS, it needs to set the determined version
         version = self.determine_version()
         self.version = version
-        
-        m.pp_yaml()
 
 
         #TODO check this
         self.combine_yaml(version)
-        m.pp_yaml()
+
+        self._conditionals()
 
         self._sed_macros(version)
-        m.pp_yaml()
 
 
     def pp_yaml_files(self):
@@ -577,15 +601,32 @@ if __name__ == '__main__':
     print "Debug executing module load %s" % args
     m = LoadYaml(args)
 
-    
+
+    print "Printing all the found module yaml files"    
     m.get_filenames_and_yamls()
     m.simple_validation()
+    m.pp_yaml_files()
+
 
     version = m.determine_version()
     print "Loading version", version
 
+
+    print "Prints the loaded common.yaml file"
+    m.pp_yaml()
+
+
+
+    print "Printing the combined data"
     m.combine_yaml(version)
     m.pp_yaml()
 
+
+    print "Printing the conditionals resolved data"
+    m._conditionals()
+    m.pp_yaml()
+
+
+    print "Printing the macro resolved data"
     m._sed_macros(version)
     m.pp_yaml()

@@ -35,7 +35,7 @@ Usage
 
 How it works
 ------------
-executes bash function  "eval $(python k-env-module.py load gcc)"
+executes bash function  "eval $(python kmod.py load gcc)"
 which resolves
 export PATH=/opt/share/gcc:/bin:etc:etc
 
@@ -45,10 +45,10 @@ So add this to your ~/.bashrc file
 KMODULESROOT=/opt/share/modules/yaml
 
 #Execute the output of k-env-modules
-module (){ eval $(python k_env_modules.py $*); }
+module (){ eval $(python kmod.py $*); }
 
 #Execute in debug for admins
-kmodule (){ echo $(python k_env_modules.py debug $*); }
+kmodule (){ echo $(python kmod.py debug $*); }
 
 
 
